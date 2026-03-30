@@ -88,3 +88,62 @@ python -m src.scripts.prepare_verifier_data --config configs/verifier_data.yaml
 python -m src.scripts.train_verifier --config configs/verifier_train.yaml
 python -m src.scripts.eval_verifier --config configs/verifier_eval.yaml
 ```
+
+## Fusion Runtime (Trigger + Verifier + Frigate)
+
+A production-style fusion runtime is available for downstream Frigate event inference.
+
+### Files
+- Runtime schema and IO helpers: `src/fusion/event_schema.py`
+- Fusion decision logic and thresholds: `src/fusion/decision_logic.py`
+- Frigate API/MQTT adapters: `src/fusion/frigate_adapter.py`
+- CLI runner: `src/scripts/run_dual_inference.py`
+- Runtime config template: `configs/fusion_runtime.yaml`
+- Example event input: `configs/fusion_example_event.json`
+- Example keyed output: `configs/fusion_example_output.json`
+
+### Supported event sources
+- Frigate event ID via API lookup
+- Frigate MQTT-like JSON payload
+- Local JSON payload file(s)
+- Offline CSV manifest rows
+
+### Runtime behavior summary
+1. Ingest Frigate-compatible event payload(s).
+2. Run Trigger first when pose input exists.
+3. Escalate suspicious/uncertain events to Verifier according to configurable thresholds.
+4. Resolve Verifier clip from event clip directly or extract centered clip from recording.
+5. Fuse Trigger + Verifier into final class `0/1/2` with explainable notes.
+6. Emit JSON keyed by `event_id -> camera_name` and run artifacts.
+
+### Output artifacts
+Each run writes:
+- `run.log`
+- `processed_events.jsonl`
+- `failed_events.jsonl`
+- `review_needed.jsonl`
+- `summary.json`
+- `final_output_keyed.json`
+
+### Example CLI commands
+
+```bash
+# 1) Dry-run with example JSON event (no model execution)
+python -m src.scripts.run_dual_inference \
+  --config configs/fusion_runtime.yaml \
+  --event-json configs/fusion_example_event.json \
+  --output-dir artifacts/fusion_dry_run \
+  --dry-run --debug
+
+# 2) Process one Frigate event ID via API
+python -m src.scripts.run_dual_inference \
+  --config configs/fusion_runtime.yaml \
+  --event-id 1709851020.457391-abc123 \
+  --output-dir artifacts/fusion_event
+
+# 3) Batch from manifest CSV
+python -m src.scripts.run_dual_inference \
+  --config configs/fusion_runtime.yaml \
+  --manifest-csv data/fusion_manifest.csv \
+  --output-dir artifacts/fusion_manifest
+```
