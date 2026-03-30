@@ -13,6 +13,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 
 from src.data.verifier_dataset import VerifierDatasetConfig, VerifierVideoDataset, build_eval_transform
+from src.common.runtime_utils import resolve_checkpoint_path, resolve_device
 from src.verifier.model import VerifierModelConfig, build_verifier_model
 from src.verifier.train import macro_metrics
 
@@ -33,13 +34,14 @@ class VerifierEvalConfig:
 
 def evaluate_verifier(config: VerifierEvalConfig) -> dict[str, Any]:
     """Evaluate checkpoint on a manifest split."""
-    device = torch.device("cuda" if (config.device == "auto" and torch.cuda.is_available()) else config.device)
+    device = resolve_device(config.device)
+    model_path = resolve_checkpoint_path(config.model_path, base_dir="artifacts/verifier_runs", run_prefix="verifier_")
 
     data_cfg = VerifierDatasetConfig(num_frames=config.num_frames, temporal_stride=config.temporal_stride, random_sample=False)
     ds = VerifierVideoDataset(Path(config.manifest_path), config.split, data_cfg, transform=build_eval_transform())
     loader = DataLoader(ds, batch_size=config.batch_size, shuffle=False)
 
-    checkpoint = torch.load(config.model_path, map_location=device)
+    checkpoint = torch.load(model_path, map_location=device)
     model_cfg = VerifierModelConfig(**checkpoint.get("config", {}))
     model = build_verifier_model(model_cfg).to(device)
     model.load_state_dict(checkpoint["model_state_dict"])
@@ -66,5 +68,7 @@ def evaluate_verifier(config: VerifierEvalConfig) -> dict[str, Any]:
     metrics["loss"] = float(np.mean(losses)) if losses else 0.0
 
     if config.output_path:
-        Path(config.output_path).write_text(json.dumps(metrics, indent=2), encoding="utf-8")
+        output_path = Path(config.output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json.dumps(metrics, indent=2), encoding="utf-8")
     return metrics

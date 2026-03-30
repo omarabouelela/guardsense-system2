@@ -584,4 +584,4 @@ def stratified_split(
     rng.shuffle(train_idx)
     rng.shuffle(val_idx)
     rng.shuffle(test_idx)
-    return np.asarray(train_idx), np.asarray(val_idx), np.asarray(test_idx)
+    return np.asarray(train_idx, dtype=np.int64), np.asarray(val_idx, dtype=np.int64), np.asarray(test_idx, dtype=np.int64)

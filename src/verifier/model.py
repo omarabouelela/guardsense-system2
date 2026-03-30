@@ -19,7 +19,13 @@ class VerifierModelConfig:
 
 def build_verifier_model(config: VerifierModelConfig) -> nn.Module:
     """Build configurable torchvision video classifier."""
-    from torchvision.models.video import MC3_18_Weights, R3D_18_Weights, mc3_18, r3d_18
+    try:
+        from torchvision.models.video import MC3_18_Weights, R3D_18_Weights, mc3_18, r3d_18
+    except Exception as exc:  # noqa: BLE001
+        raise RuntimeError(
+            "Verifier model requires torchvision video models. Install a PyTorch/torchvision "
+            "compatible pair for your Python version (for Python 3.12, use official matching wheels)."
+        ) from exc
 
     if config.backbone == "r3d_18":
         weights = R3D_18_Weights.DEFAULT if config.pretrained else None

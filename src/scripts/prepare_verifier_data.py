@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+from dataclasses import asdict
 from pathlib import Path
 
 import yaml
@@ -24,6 +25,7 @@ from src.data.video_preprocess import (
     summarize_dataset,
     validate_video,
 )
+from src.common.runtime_utils import resolve_raw_data_path
 
 LOGGER = logging.getLogger(__name__)
 
@@ -53,7 +55,7 @@ def main() -> None:
     for source in cfg["sources"]:
         indexed.extend(
             index_video_sources(
-                source_dirs=[Path(p) for p in source["paths"]],
+                source_dirs=[resolve_raw_data_path(p) for p in source["paths"]],
                 source_dataset=source["name"],
                 label=source.get("label"),
                 synthetic_or_real=source.get("synthetic_or_real", "unknown"),
@@ -108,11 +110,11 @@ def main() -> None:
     save_rejections(rejections, out_dir / "rejections.csv")
 
     summary = summarize_dataset(valid_rows, rejections)
-    save_json(summary.__dict__, out_dir / "dataset_report.json")
+    save_json(asdict(summary), out_dir / "dataset_report.json")
     save_json({"0": "normal", "1": "pre_fight", "2": "fight"}, out_dir / "label_map.json")
 
     LOGGER.info("Prepared verifier dataset under %s", out_dir)
-    LOGGER.info("Summary: %s", json.dumps(summary.__dict__, indent=2))
+    LOGGER.info("Summary: %s", json.dumps(asdict(summary), indent=2))
 
 
 if __name__ == "__main__":

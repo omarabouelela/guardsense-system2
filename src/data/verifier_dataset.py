@@ -65,7 +65,10 @@ def load_video_tensor(path: Path) -> torch.Tensor:
     try:
         from torchvision.io import read_video
     except Exception as exc:  # noqa: BLE001
-        raise RuntimeError("torchvision video io is required for verifier dataset") from exc
+        raise RuntimeError(
+            "torchvision.io.read_video is required for verifier dataset loading. "
+            "Install a torch/torchvision pair with video I/O support for your Python runtime."
+        ) from exc
 
     if not path.exists():
         raise FileNotFoundError(path)

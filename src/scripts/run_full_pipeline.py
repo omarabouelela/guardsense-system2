@@ -7,7 +7,7 @@ import csv
 import json
 import logging
 import subprocess
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -134,7 +134,7 @@ def main() -> None:
 
     report = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "stages": [result.__dict__ for result in results],
+        "stages": [asdict(result) for result in results],
         "trigger_macro_f1": trigger_metrics.get("macro_f1"),
         "trigger_per_class_f1": {k: v.get("f1") for k, v in (trigger_metrics.get("per_class") or {}).items()},
         "verifier_macro_f1": verifier_metrics.get("macro_f1"),
