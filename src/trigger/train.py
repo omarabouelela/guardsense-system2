@@ -56,6 +56,22 @@ def set_seed(seed: int) -> None:
 
 def macro_metrics(y_true: np.ndarray, y_pred: np.ndarray, num_classes: int = 3) -> dict[str, Any]:
     """Compute classification metrics without third-party metric libs."""
+    if y_true.size == 0 or y_pred.size == 0:
+        empty_conf = np.zeros((num_classes, num_classes), dtype=np.int64)
+        return {
+            "accuracy": 0.0,
+            "macro_precision": 0.0,
+            "macro_recall": 0.0,
+            "macro_f1": 0.0,
+            "per_class": {str(class_id): {"precision": 0.0, "recall": 0.0, "f1": 0.0} for class_id in range(num_classes)},
+            "label_1_precision": 0.0,
+            "label_1_recall": 0.0,
+            "label_0_false_positives": 0,
+            "label_1_vs_2_confusions": 0,
+            "confusion_matrix": empty_conf.tolist(),
+            "warnings": ["empty_ground_truth_or_predictions"],
+        }
+
     conf = np.zeros((num_classes, num_classes), dtype=np.int64)
     for truth, pred in zip(y_true, y_pred, strict=False):
         conf[int(truth), int(pred)] += 1
@@ -121,6 +137,8 @@ def evaluate_epoch(model: nn.Module, loader: DataLoader, criterion: nn.Module, d
             preds = torch.argmax(logits, dim=-1)
             all_true.append(y.cpu().numpy())
             all_pred.append(preds.cpu().numpy())
+    if not all_true:
+        return float(np.mean(losses)) if losses else 0.0, np.empty((0,), dtype=np.int64), np.empty((0,), dtype=np.int64)
     return float(np.mean(losses)) if losses else 0.0, np.concatenate(all_true), np.concatenate(all_pred)
 
 
@@ -155,6 +173,7 @@ def train_trigger(config: TrainConfig) -> dict[str, Any]:
 
     history = {"train_loss": [], "val_loss": [], "val_macro_f1": []}
     best_macro_f1 = -1.0
+    best_train_loss = float("inf")
     stale_epochs = 0
     best_path = run_dir / "best_model.pt"
 
@@ -175,7 +194,14 @@ def train_trigger(config: TrainConfig) -> dict[str, Any]:
         val_loss, y_true_val, y_pred_val = evaluate_epoch(model, val_loader, criterion, device)
         val_metrics = macro_metrics(y_true_val, y_pred_val, num_classes=config.model.num_classes)
         val_macro_f1 = float(val_metrics["macro_f1"])
-        scheduler.step(val_macro_f1)
+        val_has_samples = y_true_val.size > 0
+        if val_has_samples:
+            scheduler.step(val_macro_f1)
+        else:
+            LOGGER.warning(
+                "Validation loader produced zero samples at epoch %d; using train_loss fallback for checkpoint selection.",
+                epoch,
+            )
 
         history["train_loss"].append(train_loss)
         history["val_loss"].append(val_loss)
@@ -190,8 +216,10 @@ def train_trigger(config: TrainConfig) -> dict[str, Any]:
             val_macro_f1,
         )
 
-        if val_macro_f1 > best_macro_f1:
-            best_macro_f1 = val_macro_f1
+        is_better = (val_macro_f1 > best_macro_f1) if val_has_samples else (train_loss < best_train_loss)
+        if is_better:
+            best_macro_f1 = val_macro_f1 if val_has_samples else best_macro_f1
+            best_train_loss = train_loss if not val_has_samples else best_train_loss
             stale_epochs = 0
             torch.save({"model_state_dict": model.state_dict(), "config": asdict(config.model)}, best_path)
         else:
@@ -206,6 +234,8 @@ def train_trigger(config: TrainConfig) -> dict[str, Any]:
     test_loss, y_true_test, y_pred_test = evaluate_epoch(model, test_loader, criterion, device)
     test_metrics = macro_metrics(y_true_test, y_pred_test, num_classes=config.model.num_classes)
     test_metrics["test_loss"] = test_loss
+    if y_true_test.size == 0:
+        LOGGER.warning("Test loader produced zero samples; returning zeroed test metrics.")
 
     probs_rows: list[dict[str, Any]] = []
     model.eval()
