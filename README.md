@@ -52,3 +52,39 @@ python -m src.scripts.eval_trigger --config configs/trigger_eval.yaml
 - Target runtime is Python **3.11+ / 3.12+**.
 - Current development assumptions align with Python **3.12.3**.
 - If PyTorch wheels for your platform lag on 3.12, pin to a stable build from the official PyTorch index.
+
+
+## Verifier Pipeline (RGB Video)
+
+This repository now includes a production Verifier baseline under `src/data`, `src/verifier`, and `src/scripts`.
+
+### Verifier assumptions
+- Trains on short RGB clips (`.mp4` / `.avi`) with labels `0/1/2`.
+- Standard preprocessing target is **30 FPS**, **640x360**, and **2-4 seconds** centered on the action.
+- Supports direct Frigate event clips or extraction from Frigate recordings when clips are unavailable.
+- Preserves Frigate context (`event_id`, `camera_name`, optional `track_id`) in manifests and inference outputs.
+- Simuletic synthetic RGB clips are treated as a Label 1 (`pre-fight/tension`) gap-filler while real data remains the backbone for labels 0 and 2.
+
+### Implemented Verifier components
+- Recursive video indexing and ffprobe metadata extraction
+- Validation for unreadable, too-short, dark, and blurry clips
+- Standardized preprocessing with ffmpeg
+- Deterministic stratified splitting with optional source-aware grouping
+- Dataset summaries and rejection reporting
+- Torchvision video baseline (`r3d_18` / `mc3_18`)
+- Training with class weights, scheduler, early stopping, mixed precision, and full run artifacts
+- Evaluation with macro/per-class metrics and confusion matrix
+- Frigate event-aware inference wrappers and fallback behavior for snapshot-only events
+
+### Verifier configs
+- `configs/verifier_data.yaml`
+- `configs/verifier_train.yaml`
+- `configs/verifier_eval.yaml`
+
+### Verifier example commands
+
+```bash
+python -m src.scripts.prepare_verifier_data --config configs/verifier_data.yaml
+python -m src.scripts.train_verifier --config configs/verifier_train.yaml
+python -m src.scripts.eval_verifier --config configs/verifier_eval.yaml
+```

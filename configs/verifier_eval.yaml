@@ -1,0 +1,8 @@
+model_path: artifacts/verifier_runs/latest/best_model.pt
+manifest_path: artifacts/verifier_data/split_manifest.csv
+split: test
+batch_size: 8
+device: auto
+num_frames: 16
+temporal_stride: 2
+output_path: artifacts/verifier_runs/latest/eval_metrics.json
