@@ -7,6 +7,13 @@ from pathlib import Path
 
 import yaml
 
+try:
+    from ._bootstrap import ensure_project_root_on_path
+except ImportError:  # direct script execution
+    from _bootstrap import ensure_project_root_on_path
+
+ensure_project_root_on_path()
+
 from src.data.verifier_dataset import VerifierDatasetConfig
 from src.verifier.model import VerifierModelConfig
 from src.verifier.train import VerifierTrainConfig, train_verifier

@@ -14,6 +14,13 @@ from typing import Any
 
 import yaml
 
+try:
+    from ._bootstrap import ensure_project_root_on_path
+except ImportError:  # direct script execution
+    from _bootstrap import ensure_project_root_on_path
+
+ensure_project_root_on_path()
+
 LOGGER = logging.getLogger(__name__)
 
 

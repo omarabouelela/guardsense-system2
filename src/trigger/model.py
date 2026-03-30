@@ -12,11 +12,21 @@ from torch import nn
 class TriggerModelConfig:
     """Config for temporal CNN classifier."""
 
+    architecture: str = "temporal_cnn"
     num_keypoints: int = 17
     num_channels: int = 3
     num_classes: int = 3
     hidden_size: int = 128
     dropout: float = 0.2
+
+    def __post_init__(self) -> None:
+        """Validate architecture compatibility."""
+        supported = {"temporal_cnn", "trigger_temporal_cnn"}
+        if self.architecture not in supported:
+            raise ValueError(
+                f"Unsupported Trigger architecture '{self.architecture}'. "
+                f"Supported values: {sorted(supported)}"
+            )
 
 
 class TriggerTemporalCNN(nn.Module):
@@ -61,4 +71,6 @@ class TriggerTemporalCNN(nn.Module):
 
 def build_trigger_model(config: TriggerModelConfig) -> TriggerTemporalCNN:
     """Factory helper for model instantiation."""
+    if config.architecture not in {"temporal_cnn", "trigger_temporal_cnn"}:
+        raise ValueError(f"Unsupported Trigger architecture: {config.architecture}")
     return TriggerTemporalCNN(config)
