@@ -1,0 +1,2 @@
+runtime_config: configs/fusion_runtime.yaml
+example_event_json: configs/fusion_example_event.json

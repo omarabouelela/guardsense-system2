@@ -1,0 +1,2 @@
+trigger_eval_config: configs/trigger_eval.yaml
+verifier_eval_config: configs/verifier_eval.yaml

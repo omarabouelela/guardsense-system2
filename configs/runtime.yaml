@@ -1,0 +1,12 @@
+trigger_data_config: configs/trigger_data.yaml
+verifier_data_config: configs/verifier_data.yaml
+trigger_train_config: configs/trigger_train.yaml
+trigger_eval_config: configs/trigger_eval.yaml
+verifier_train_config: configs/verifier_train.yaml
+verifier_eval_config: configs/verifier_eval.yaml
+runtime_config: configs/fusion_runtime.yaml
+runtime_events_json: configs/fusion_example_event.json
+runtime_output_dir: artifacts/fusion_runtime
+trigger_run_dir: artifacts/runs
+verifier_run_dir: artifacts/verifier_runs
+run_dual_inference: true

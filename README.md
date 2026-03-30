@@ -147,3 +147,22 @@ python -m src.scripts.run_dual_inference \
   --manifest-csv data/fusion_manifest.csv \
   --output-dir artifacts/fusion_manifest
 ```
+
+## End-to-end orchestration
+
+Use `src/scripts/run_full_pipeline.py` to run data prep, training, evaluation, and runtime inference with optional resume/skip/dry-run controls.
+
+```bash
+python -m src.scripts.run_full_pipeline \
+  --config configs/runtime.yaml \
+  --output-dir artifacts/full_pipeline \
+  --dry-run
+```
+
+Outputs include:
+- `final_experiment_report.json`
+- `final_experiment_report.csv`
+- `final_experiment_report.txt`
+- stage marker files (`*.done`) for resume mode
+
+This keeps Frigate downstream integration intact and emits runtime outputs keyed by `event_id` and `camera_name`.
