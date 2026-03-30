@@ -1,0 +1,22 @@
+manifest_path: artifacts/verifier_data/split_manifest.csv
+output_dir: artifacts/verifier_runs
+batch_size: 8
+epochs: 20
+lr: 0.0001
+weight_decay: 0.0001
+patience: 5
+seed: 42
+num_workers: 0
+device: auto
+mixed_precision: true
+
+model:
+  backbone: r3d_18
+  num_classes: 3
+  pretrained: false
+  dropout: 0.2
+
+data:
+  num_frames: 16
+  temporal_stride: 2
+  random_sample: true
