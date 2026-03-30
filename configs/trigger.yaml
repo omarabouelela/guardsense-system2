@@ -1,0 +1,4 @@
+extends: configs/base.yaml
+data_config: configs/trigger_data.yaml
+train_config: configs/trigger_train.yaml
+eval_config: configs/trigger_eval.yaml

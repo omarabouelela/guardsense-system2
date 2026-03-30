@@ -1,0 +1,3 @@
+trigger_model_path: artifacts/runs/latest/best_model.pt
+verifier_model_path: artifacts/verifier_runs/latest/best_model.pt
+runtime_config: configs/fusion_runtime.yaml
