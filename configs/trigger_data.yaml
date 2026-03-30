@@ -1,0 +1,31 @@
+output_dir: artifacts/trigger_data
+normalization:
+  mode: frame
+  frame_width: 1920
+  frame_height: 1080
+temporal:
+  window_size: 32
+  overlap: 0.5
+  short_policy: pad
+split:
+  train_ratio: 0.7
+  val_ratio: 0.15
+  test_ratio: 0.15
+  seed: 42
+  source_aware: true
+sources:
+  - name: rwf2000
+    paths:
+      - data/raw/rwf2000/pose
+    label: 2
+    synthetic_or_real: real
+  - name: airtlab
+    paths:
+      - data/raw/airtlab/pose
+    label: 0
+    synthetic_or_real: real
+  - name: simuletic_prefight
+    paths:
+      - data/raw/simuletic/pose
+    label: 1
+    synthetic_or_real: synthetic
