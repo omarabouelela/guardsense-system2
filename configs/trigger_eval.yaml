@@ -1,0 +1,6 @@
+model_path: artifacts/runs/latest/best_model.pt
+dataset_path: artifacts/trigger_data/trigger_dataset.hdf5
+split: test
+batch_size: 128
+device: auto
+output_path: artifacts/runs/latest/eval_metrics.json
