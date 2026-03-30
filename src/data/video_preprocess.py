@@ -151,6 +151,54 @@ def ffprobe_video(path: Path) -> dict[str, Any]:
     }
 
 
+def _opencv_video_meta(path: Path) -> dict[str, Any]:
+    """Fallback metadata probing using OpenCV when ffprobe is unavailable/incomplete."""
+    try:
+        import cv2
+    except Exception as exc:  # noqa: BLE001
+        raise RuntimeError("OpenCV fallback unavailable for metadata probing") from exc
+
+    cap = cv2.VideoCapture(str(path))
+    try:
+        if not cap.isOpened():
+            raise RuntimeError("OpenCV could not open video")
+        fps = float(cap.get(cv2.CAP_PROP_FPS) or 0.0)
+        frame_count = float(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0.0)
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH) or 0)
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0)
+        duration = frame_count / fps if fps > 0 and frame_count > 0 else 0.0
+        return {
+            "codec": "opencv",
+            "fps": fps,
+            "duration_seconds": duration,
+            "width": width,
+            "height": height,
+        }
+    finally:
+        cap.release()
+
+
+def probe_video_metadata(path: Path) -> dict[str, Any]:
+    """Probe video metadata with ffprobe first, then OpenCV fallback if needed."""
+    try:
+        meta = ffprobe_video(path)
+    except Exception as exc:  # noqa: BLE001
+        LOGGER.warning("ffprobe failed for %s; trying OpenCV fallback (%s)", path, exc)
+        return _opencv_video_meta(path)
+
+    if meta["duration_seconds"] <= 0 or meta["fps"] <= 0 or meta["width"] <= 0 or meta["height"] <= 0:
+        LOGGER.warning("ffprobe returned incomplete metadata for %s; trying OpenCV fallback.", path)
+        try:
+            fallback = _opencv_video_meta(path)
+            for key in ("fps", "duration_seconds", "width", "height"):
+                if float(meta.get(key, 0.0) or 0.0) <= 0:
+                    meta[key] = fallback[key]
+        except Exception as exc:  # noqa: BLE001
+            LOGGER.warning("OpenCV fallback failed for %s (%s); using ffprobe metadata as-is.", path, exc)
+
+    return meta
+
+
 def parse_label_from_path(path: Path) -> int | None:
     """Parse class from directory names like 0_normal/1_tension/2_fight."""
     for part in path.parts:
@@ -190,7 +238,7 @@ def index_video_sources(
                 source_type="file",
             )
             try:
-                meta = ffprobe_video(path)
+                meta = probe_video_metadata(path)
                 row.codec = str(meta.get("codec") or "")
                 row.fps = float(meta.get("fps") or 0.0)
                 row.duration_seconds = float(meta.get("duration_seconds") or 0.0)
@@ -246,7 +294,7 @@ def validate_video(record: VideoIndexRecord, config: VideoValidationConfig) -> t
     """Validate readability, minimum duration, and optional quality flags."""
     path = Path(record.original_path)
     try:
-        meta = ffprobe_video(path)
+        meta = probe_video_metadata(path)
     except Exception as exc:  # noqa: BLE001
         return False, f"unreadable:{exc}"
 
@@ -255,7 +303,10 @@ def validate_video(record: VideoIndexRecord, config: VideoValidationConfig) -> t
         return False, f"too_short:{duration:.2f}s"
 
     if config.flag_dark or config.flag_blurry:
-        sampled = sample_frame_stats(path)
+        try:
+            sampled = sample_frame_stats(path)
+        except Exception as exc:  # noqa: BLE001
+            return False, f"quality_check_failed:{exc}"
         if config.flag_dark and sampled["avg_luma"] < config.dark_luma_threshold:
             return False, f"too_dark:{sampled['avg_luma']:.2f}"
         if config.flag_blurry and sampled["laplacian_var"] < config.blurry_laplacian_var_threshold:
@@ -266,7 +317,7 @@ def validate_video(record: VideoIndexRecord, config: VideoValidationConfig) -> t
 
 def sample_frame_stats(path: Path) -> dict[str, float]:
     """Estimate darkness/blurriness from a center frame via ffmpeg + numpy."""
-    probe = ffprobe_video(path)
+    probe = probe_video_metadata(path)
     t = max(float(probe["duration_seconds"]) / 2.0, 0.0)
     width = int(probe["width"])
     height = int(probe["height"])
@@ -327,7 +378,7 @@ def preprocess_clip(
     roi: dict[str, int] | None = None,
 ) -> dict[str, Any]:
     """Standardize one clip to target fps/resolution/duration using ffmpeg."""
-    meta = ffprobe_video(input_path)
+    meta = probe_video_metadata(input_path)
     duration = float(meta["duration_seconds"])
     clip_len = min(max(config.target_duration_seconds, config.min_duration_seconds), config.max_duration_seconds)
     start = centered_trim_start(duration, clip_len)
@@ -341,36 +392,48 @@ def preprocess_clip(
         h = max(roi.get("h", config.target_height), 1)
         vf = f"crop={w}:{h}:{x}:{y},{vf}"
 
-    cmd = [
-        "ffmpeg",
-        "-hide_banner",
-        "-loglevel",
-        "error",
-        "-ss",
-        f"{start:.3f}",
-        "-i",
-        str(input_path),
-        "-t",
-        f"{clip_len:.3f}",
-        "-r",
-        str(config.target_fps),
-        "-vf",
-        vf,
-        "-c:v",
-        config.target_codec,
-        "-preset",
-        config.preset,
-        "-crf",
-        str(config.crf),
-        "-an",
-        "-y",
-        str(output_path),
-    ]
-    proc = _run_cmd(cmd)
-    if proc.returncode != 0:
-        raise RuntimeError(f"ffmpeg preprocess failed: {proc.stderr.strip()}")
+    codec_candidates = [config.target_codec]
+    if config.target_codec != "mpeg4":
+        codec_candidates.append("mpeg4")
+    last_error = ""
+    for codec in codec_candidates:
+        cmd = [
+            "ffmpeg",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-ss",
+            f"{start:.3f}",
+            "-i",
+            str(input_path),
+            "-t",
+            f"{clip_len:.3f}",
+            "-r",
+            str(config.target_fps),
+            "-vf",
+            vf,
+            "-c:v",
+            codec,
+            "-preset",
+            config.preset,
+            "-crf",
+            str(config.crf),
+            "-an",
+            "-y",
+            str(output_path),
+        ]
+        proc = _run_cmd(cmd)
+        if proc.returncode == 0:
+            if codec != config.target_codec:
+                LOGGER.warning("Fell back to codec '%s' for %s", codec, input_path)
+            break
+        last_error = proc.stderr.strip()
+    else:
+        raise RuntimeError(f"ffmpeg preprocess failed: {last_error}")
 
-    processed_meta = ffprobe_video(output_path)
+    processed_meta = probe_video_metadata(output_path)
+    if processed_meta["duration_seconds"] <= 0 or processed_meta["fps"] <= 0:
+        raise RuntimeError("processed clip metadata invalid after preprocessing")
     return processed_meta
 
 
@@ -420,7 +483,7 @@ def extract_event_centered_clip(
     proc = _run_cmd(cmd)
     if proc.returncode != 0:
         raise RuntimeError(f"ffmpeg extract failed: {proc.stderr.strip()}")
-    return ffprobe_video(output_path)
+    return probe_video_metadata(output_path)
 
 
 def frigate_event_to_clip(

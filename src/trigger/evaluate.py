@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -17,6 +18,8 @@ from src.data.trigger_dataset import TriggerPoseDataset
 from src.common.runtime_utils import resolve_checkpoint_path, resolve_device
 from src.trigger.model import TriggerModelConfig, build_trigger_model
 from src.trigger.train import macro_metrics
+
+LOGGER = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -63,8 +66,13 @@ def evaluate_trigger(config: EvaluateConfig) -> dict[str, Any]:
             y_true.append(batch_y.cpu().numpy())
             y_pred.append(preds.cpu().numpy())
 
-    y_true_np = np.concatenate(y_true)
-    y_pred_np = np.concatenate(y_pred)
+    if not y_true:
+        LOGGER.warning("Evaluation split '%s' is empty; returning zeroed metrics.", config.split)
+        y_true_np = np.empty((0,), dtype=np.int64)
+        y_pred_np = np.empty((0,), dtype=np.int64)
+    else:
+        y_true_np = np.concatenate(y_true)
+        y_pred_np = np.concatenate(y_pred)
     metrics = macro_metrics(y_true_np, y_pred_np, num_classes=model_cfg.num_classes)
     metrics["loss"] = float(np.mean(losses)) if losses else 0.0
 
