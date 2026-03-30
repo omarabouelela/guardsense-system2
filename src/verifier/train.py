@@ -27,6 +27,7 @@ from src.data.verifier_dataset import (
     build_train_transform,
     class_weights_from_manifest,
 )
+from src.common.runtime_utils import refresh_latest_alias, resolve_device
 from src.verifier.model import VerifierModelConfig, build_verifier_model
 
 LOGGER = logging.getLogger(__name__)
@@ -57,13 +58,6 @@ def set_seed(seed: int) -> None:
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
-
-
-def choose_device(device_arg: str) -> torch.device:
-    """Resolve device string."""
-    if device_arg == "auto":
-        return torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    return torch.device(device_arg)
 
 
 def macro_metrics(y_true: np.ndarray, y_pred: np.ndarray, num_classes: int = 3) -> dict[str, Any]:
@@ -124,7 +118,7 @@ def train_verifier(config: VerifierTrainConfig) -> dict[str, Any]:
     """Train verifier model and save full run artifacts."""
     set_seed(config.seed)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s - %(message)s")
-    device = choose_device(config.device)
+    device = resolve_device(config.device)
 
     run_id = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     run_dir = Path(config.output_dir) / f"verifier_{config.model.backbone}_{run_id}"
@@ -222,6 +216,7 @@ def train_verifier(config: VerifierTrainConfig) -> dict[str, Any]:
                 )
 
     _save_artifacts(config, run_dir, history, metrics, pred_rows)
+    refresh_latest_alias(Path(config.output_dir), run_dir)
     return {"run_dir": str(run_dir), "metrics": metrics}
 
 

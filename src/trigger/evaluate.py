@@ -14,6 +14,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 
 from src.data.trigger_dataset import TriggerPoseDataset
+from src.common.runtime_utils import resolve_checkpoint_path, resolve_device
 from src.trigger.model import TriggerModelConfig, build_trigger_model
 from src.trigger.train import macro_metrics
 
@@ -32,7 +33,8 @@ class EvaluateConfig:
 
 def evaluate_trigger(config: EvaluateConfig) -> dict[str, Any]:
     """Evaluate model checkpoint on selected split from HDF5 dataset."""
-    device = torch.device("cuda" if (config.device == "auto" and torch.cuda.is_available()) else config.device)
+    device = resolve_device(config.device)
+    model_path = resolve_checkpoint_path(config.model_path, base_dir="artifacts/runs", run_prefix="trigger_")
 
     with h5py.File(config.dataset_path, "r") as h5f:
         x = h5f[f"X_{config.split}"][()]
@@ -41,7 +43,7 @@ def evaluate_trigger(config: EvaluateConfig) -> dict[str, Any]:
     ds = TriggerPoseDataset(x, y)
     loader = DataLoader(ds, batch_size=config.batch_size, shuffle=False)
 
-    checkpoint = torch.load(config.model_path, map_location=device)
+    checkpoint = torch.load(model_path, map_location=device)
     model_cfg = TriggerModelConfig(**checkpoint.get("config", {}))
     model = build_trigger_model(model_cfg).to(device)
     model.load_state_dict(checkpoint["model_state_dict"])
@@ -67,6 +69,8 @@ def evaluate_trigger(config: EvaluateConfig) -> dict[str, Any]:
     metrics["loss"] = float(np.mean(losses)) if losses else 0.0
 
     if config.output_path:
-        Path(config.output_path).write_text(json.dumps(metrics, indent=2), encoding="utf-8")
+        output_path = Path(config.output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json.dumps(metrics, indent=2), encoding="utf-8")
 
     return metrics

@@ -17,6 +17,7 @@ from src.data.pose_preprocess import (
     temporal_windows,
 )
 from src.data.pose_preprocess import DatasetIndexRecord
+from src.common.runtime_utils import resolve_checkpoint_path, resolve_device
 from src.trigger.model import TriggerModelConfig, build_trigger_model
 
 
@@ -71,8 +72,9 @@ class TriggerInferencer:
 
     def __init__(self, config: InferenceConfig) -> None:
         self.config = config
-        self.device = torch.device("cuda" if (config.device == "auto" and torch.cuda.is_available()) else config.device)
-        checkpoint = torch.load(config.model_path, map_location=self.device)
+        self.device = resolve_device(config.device)
+        model_path = resolve_checkpoint_path(config.model_path, base_dir="artifacts/runs", run_prefix="trigger_")
+        checkpoint = torch.load(model_path, map_location=self.device)
         model_cfg = TriggerModelConfig(**checkpoint.get("config", {}))
         self.model = build_trigger_model(model_cfg).to(self.device)
         self.model.load_state_dict(checkpoint["model_state_dict"])

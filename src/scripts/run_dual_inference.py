@@ -10,6 +10,7 @@ from typing import Any
 
 import yaml
 
+from src.common.runtime_utils import resolve_checkpoint_path
 from src.data.video_preprocess import VideoProcessConfig
 from src.fusion.decision_logic import FusionRuntime, FusionRuntimeConfig, FusionThresholds, RuntimeStats, update_stats
 from src.fusion.event_schema import FusionDecision, FusionEvent, load_json_events, load_manifest_csv
@@ -129,6 +130,13 @@ def build_inferencers(raw_cfg: dict[str, Any], dry_run: bool) -> tuple[Any, Any]
     verifier_model_path = raw_cfg.get("models", {}).get("verifier_model_path")
     if not trigger_model_path or not verifier_model_path:
         raise ValueError("models.trigger_model_path and models.verifier_model_path are required unless --dry-run")
+
+    trigger_model_path = str(
+        resolve_checkpoint_path(trigger_model_path, base_dir="artifacts/runs", run_prefix="trigger_")
+    )
+    verifier_model_path = str(
+        resolve_checkpoint_path(verifier_model_path, base_dir="artifacts/verifier_runs", run_prefix="verifier_")
+    )
 
     trigger = TriggerInferencer(
         InferenceConfig(

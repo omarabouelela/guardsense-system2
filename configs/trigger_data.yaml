@@ -16,16 +16,16 @@ split:
 sources:
   - name: rwf2000
     paths:
-      - data/raw/rwf2000/pose
+      - dataset/raw/rwf2000/pose
     label: 2
     synthetic_or_real: real
   - name: airtlab
     paths:
-      - data/raw/airtlab/pose
+      - dataset/raw/airtlab/pose
     label: 0
     synthetic_or_real: real
   - name: simuletic_prefight
     paths:
-      - data/raw/simuletic/pose
+      - dataset/raw/simuletic/pose
     label: 1
     synthetic_or_real: synthetic

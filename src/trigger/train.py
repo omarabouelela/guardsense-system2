@@ -20,6 +20,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
 
 from src.data.trigger_dataset import TriggerPoseDataset
+from src.common.runtime_utils import refresh_latest_alias, resolve_device
 from src.trigger.model import TriggerModelConfig, build_trigger_model
 
 LOGGER = logging.getLogger(__name__)
@@ -51,13 +52,6 @@ def set_seed(seed: int) -> None:
     torch.cuda.manual_seed_all(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
-
-
-def choose_device(device_arg: str) -> torch.device:
-    """Resolve training device."""
-    if device_arg == "auto":
-        return torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    return torch.device(device_arg)
 
 
 def macro_metrics(y_true: np.ndarray, y_pred: np.ndarray, num_classes: int = 3) -> dict[str, Any]:
@@ -141,7 +135,7 @@ def train_trigger(config: TrainConfig) -> dict[str, Any]:
     run_dir.mkdir(parents=True, exist_ok=True)
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s - %(message)s")
-    device = choose_device(config.device)
+    device = resolve_device(config.device)
     LOGGER.info("Using device=%s", device)
 
     x_train, y_train, x_val, y_val, x_test, y_test = load_hdf5_splits(Path(config.dataset_path))
@@ -237,6 +231,7 @@ def train_trigger(config: TrainConfig) -> dict[str, Any]:
             start_idx += len(preds)
 
     _save_run_artifacts(config, run_dir, history, test_metrics, probs_rows)
+    refresh_latest_alias(output_root, run_dir)
     return {"run_dir": str(run_dir), "best_macro_f1": best_macro_f1, "test_metrics": test_metrics}
 
 

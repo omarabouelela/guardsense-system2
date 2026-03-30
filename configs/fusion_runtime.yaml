@@ -1,7 +1,7 @@
 models:
   # Required unless --dry-run
-  trigger_model_path: "artifacts/trigger/best.pt"
-  verifier_model_path: "artifacts/verifier/best.pt"
+  trigger_model_path: "artifacts/runs/latest/best_model.pt"
+  verifier_model_path: "artifacts/verifier_runs/latest/best_model.pt"
 
 frigate:
   api_base_url: "http://localhost:5000"

@@ -92,7 +92,7 @@ def stratified_split_indices(
         rng.shuffle(split)
 
     LOGGER.info("Split counts train=%d val=%d test=%d", len(train_idx), len(val_idx), len(test_idx))
-    return np.asarray(train_idx), np.asarray(val_idx), np.asarray(test_idx)
+    return np.asarray(train_idx, dtype=np.int64), np.asarray(val_idx, dtype=np.int64), np.asarray(test_idx, dtype=np.int64)
 
 
 def save_split_manifest(

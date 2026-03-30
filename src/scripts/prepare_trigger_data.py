@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+from dataclasses import asdict
 from pathlib import Path
 
 import numpy as np
@@ -28,6 +29,7 @@ from src.data.pose_preprocess import (
     save_rejection_log,
     temporal_windows,
 )
+from src.common.runtime_utils import resolve_raw_data_path
 from src.data.trigger_dataset import SplitConfig, save_split_manifest, stratified_split_indices, subset_arrays
 
 LOGGER = logging.getLogger(__name__)
@@ -57,7 +59,7 @@ def main() -> None:
     for source in config["sources"]:
         index_rows.extend(
             index_pose_sources(
-                source_dirs=[Path(p) for p in source["paths"]],
+                source_dirs=[resolve_raw_data_path(p) for p in source["paths"]],
                 source_dataset=source["name"],
                 label=int(source["label"]),
                 synthetic_or_real=source.get("synthetic_or_real", "unknown"),
@@ -113,7 +115,7 @@ def main() -> None:
     save_rejection_log(rejections, output_dir / "rejections.csv")
 
     report = generate_dataset_report(accepted_rows, sequence_lengths, missing_ratios, rejections)
-    save_json(report.__dict__, output_dir / "dataset_report.json")
+    save_json(asdict(report), output_dir / "dataset_report.json")
     save_json({"0": "normal", "1": "pre_fight", "2": "fight"}, output_dir / "label_map.json")
 
     debug_count = min(3, len(x))
@@ -121,7 +123,7 @@ def main() -> None:
         plot_pose_sequence(x[i], title=f"sample={sample_ids[i]} label={y[i]}", output_path=output_dir / f"debug_pose_{i}.png")
 
     LOGGER.info("Prepared dataset in %s with %d windows", output_dir, len(x))
-    LOGGER.info("Report: %s", json.dumps(report.__dict__, indent=2))
+    LOGGER.info("Report: %s", json.dumps(asdict(report), indent=2))
 
 
 if __name__ == "__main__":

@@ -16,6 +16,7 @@ This repository includes a full production Trigger baseline pipeline under `src/
 - Temporal windows use `window=32` with `50%` overlap.
 - Visibility is preserved and used in preprocessing/inference.
 - Frigate stays upstream (event/media source); Trigger runs downstream.
+- Device config `device: auto` resolves to `cuda` when available, otherwise `cpu`.
 
 ### Supported data inputs
 - YOLOv8-pose style `.txt`
@@ -64,6 +65,7 @@ This repository now includes a production Verifier baseline under `src/data`, `s
 - Supports direct Frigate event clips or extraction from Frigate recordings when clips are unavailable.
 - Preserves Frigate context (`event_id`, `camera_name`, optional `track_id`) in manifests and inference outputs.
 - Simuletic synthetic RGB clips are treated as a Label 1 (`pre-fight/tension`) gap-filler while real data remains the backbone for labels 0 and 2.
+- Device config `device: auto` resolves to `cuda` when available, otherwise `cpu`.
 
 ### Implemented Verifier components
 - Recursive video indexing and ffprobe metadata extraction
@@ -88,6 +90,10 @@ python -m src.scripts.prepare_verifier_data --config configs/verifier_data.yaml
 python -m src.scripts.train_verifier --config configs/verifier_train.yaml
 python -m src.scripts.eval_verifier --config configs/verifier_eval.yaml
 ```
+
+### Torchvision compatibility note (Python 3.12)
+- Verifier training/eval/inference requires `torchvision` video components (`torchvision.models.video` and `torchvision.io.read_video`).
+- If import fails, install a matching PyTorch + torchvision pair from official wheels for your Python/CUDA build.
 
 ## Fusion Runtime (Trigger + Verifier + Frigate)
 
@@ -115,6 +121,15 @@ A production-style fusion runtime is available for downstream Frigate event infe
 4. Resolve Verifier clip from event clip directly or extract centered clip from recording.
 5. Fuse Trigger + Verifier into final class `0/1/2` with explainable notes.
 6. Emit JSON keyed by `event_id -> camera_name` and run artifacts.
+
+### Checkpoint path resolution
+- Training writes timestamped directories under `artifacts/runs/` and `artifacts/verifier_runs/`.
+- After each training run, `latest/` is refreshed so default eval/runtime configs can resolve checkpoints automatically.
+- Eval/runtime also fall back to the most recent valid run checkpoint when configured `latest` paths are missing.
+
+### Raw data path compatibility
+- Canonical config convention is `dataset/raw/...`.
+- Backward compatibility is preserved: `data/raw/...` is automatically resolved when possible.
 
 ### Output artifacts
 Each run writes:
@@ -166,3 +181,19 @@ Outputs include:
 - stage marker files (`*.done`) for resume mode
 
 This keeps Frigate downstream integration intact and emits runtime outputs keyed by `event_id` and `camera_name`.
+
+## Quick smoke checks
+
+```bash
+python -m unittest discover -s tests
+python -m src.scripts.prepare_trigger_data --help
+python -m src.scripts.train_trigger --help
+python -m src.scripts.eval_trigger --help
+python -m src.scripts.prepare_verifier_data --help
+python -m src.scripts.train_verifier --help
+python -m src.scripts.eval_verifier --help
+python -m src.scripts.run_dual_inference --help
+python -m src.scripts.run_full_pipeline --help
+python -m src.scripts.run_dual_inference --config configs/fusion_runtime.yaml --event-json configs/fusion_example_event.json --output-dir artifacts/fusion_dry_run --dry-run
+python -m src.scripts.run_full_pipeline --config configs/runtime.yaml --output-dir artifacts/full_pipeline_dry_run --dry-run
+```

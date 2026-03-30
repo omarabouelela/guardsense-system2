@@ -8,6 +8,7 @@ from typing import Any
 
 import torch
 
+from src.common.runtime_utils import resolve_checkpoint_path, resolve_device
 from src.data.verifier_dataset import load_video_tensor, sample_clip_frames
 from src.data.video_preprocess import FrigateEvent, VideoProcessConfig, frigate_event_to_clip, parse_frigate_payload
 from src.verifier.model import VerifierModelConfig, build_verifier_model
@@ -28,8 +29,9 @@ class VerifierInferencer:
 
     def __init__(self, config: VerifierInferenceConfig) -> None:
         self.config = config
-        self.device = torch.device("cuda" if (config.device == "auto" and torch.cuda.is_available()) else config.device)
-        checkpoint = torch.load(config.model_path, map_location=self.device)
+        self.device = resolve_device(config.device)
+        model_path = resolve_checkpoint_path(config.model_path, base_dir="artifacts/verifier_runs", run_prefix="verifier_")
+        checkpoint = torch.load(model_path, map_location=self.device)
         model_cfg = VerifierModelConfig(**checkpoint.get("config", {}))
         self.model = build_verifier_model(model_cfg).to(self.device)
         self.model.load_state_dict(checkpoint["model_state_dict"])
