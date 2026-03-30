@@ -10,6 +10,7 @@ num_workers: 0
 device: auto
 class_weights: [1.0, 1.5, 1.2]
 model:
+  architecture: temporal_cnn
   num_keypoints: 17
   num_channels: 3
   num_classes: 3

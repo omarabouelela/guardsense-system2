@@ -11,6 +11,13 @@ from pathlib import Path
 import numpy as np
 import yaml
 
+try:
+    from ._bootstrap import ensure_project_root_on_path
+except ImportError:  # direct script execution
+    from _bootstrap import ensure_project_root_on_path
+
+ensure_project_root_on_path()
+
 from src.data.pose_preprocess import (
     DatasetIndexRecord,
     NormalizationConfig,
@@ -54,6 +61,7 @@ def main() -> None:
     normalization = NormalizationConfig(**config.get("normalization", {}))
     temporal = SequenceAssemblyConfig(**config.get("temporal", {}))
     split_cfg = SplitConfig(**config.get("split", {}))
+    txt_layout = str(config.get("txt_layout", "auto"))
 
     index_rows: list[DatasetIndexRecord] = []
     for source in config["sources"]:
@@ -76,7 +84,7 @@ def main() -> None:
     missing_ratios: list[float] = []
     sequence_lengths: list[int] = []
 
-    for row, seq, bboxes in iter_pose_sequences(index_rows):
+    for row, seq, bboxes in iter_pose_sequences(index_rows, txt_layout=txt_layout):
         try:
             normalized = apply_normalization(seq, normalization, bboxes=bboxes)
             windows = temporal_windows(normalized, temporal)

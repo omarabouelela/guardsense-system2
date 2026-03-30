@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 import json
 import logging
+import re
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from statistics import mean, median
@@ -18,6 +19,7 @@ import pandas as pd
 LOGGER = logging.getLogger(__name__)
 
 LABEL_MAP: dict[int, str] = {0: "normal", 1: "pre_fight", 2: "fight"}
+TXT_LAYOUT_VALUES = {"auto", "sequence_per_file", "frame_per_file"}
 
 
 @dataclass(slots=True)
@@ -171,6 +173,123 @@ def parse_yolov8_pose_file(path: Path, num_keypoints: int = 17) -> tuple[np.ndar
             bboxes.append(bbox)
     if not poses:
         raise ValueError(f"No pose rows found in {path}")
+    return np.stack(poses, axis=0), bboxes
+
+
+def _file_stem_prefix(path: Path) -> str:
+    """Derive grouping prefix by removing common frame suffixes."""
+    stem = path.stem
+    match = re.match(r"^(.*?)(?:[_-]?(?:frame|img|image))?[_-]?\d+$", stem, flags=re.IGNORECASE)
+    if match and match.group(1):
+        return match.group(1)
+    return stem
+
+
+def _frame_index(path: Path) -> int | None:
+    """Extract numeric frame index from file stem."""
+    match = re.search(r"(\d+)(?!.*\d)", path.stem)
+    return int(match.group(1)) if match else None
+
+
+def _frame_sort_key(path: Path) -> tuple[int, str]:
+    """Sort by extracted index, then filename for deterministic ordering."""
+    frame_idx = _frame_index(path)
+    if frame_idx is not None:
+        return frame_idx, path.name
+    return 10**9, path.name
+
+
+def _detect_txt_layout(group_paths: Sequence[Path], frame_counts: Sequence[int | None]) -> str:
+    """Infer txt layout for a grouped set of files."""
+    valid_counts = [value for value in frame_counts if value is not None]
+    mostly_single_line = bool(valid_counts) and (sum(1 for v in valid_counts if v <= 1) / len(valid_counts)) >= 0.8
+    if len(group_paths) > 1 and mostly_single_line:
+        return "frame_per_file"
+    return "sequence_per_file"
+
+
+def _group_txt_records(
+    records: Sequence[DatasetIndexRecord],
+    txt_layout: str,
+) -> list[tuple[DatasetIndexRecord, list[Path]]]:
+    """Group txt records as sequence-level units based on configured layout."""
+    grouped: dict[tuple[str, str, int, str], list[DatasetIndexRecord]] = {}
+    for record in records:
+        source_path = Path(record.original_path)
+        group_key = (str(source_path.parent), record.source_dataset, record.label, _file_stem_prefix(source_path))
+        grouped.setdefault(group_key, []).append(record)
+
+    assembled: list[tuple[DatasetIndexRecord, list[Path]]] = []
+    for (parent, source_dataset, label, stem_prefix), rows in sorted(grouped.items()):
+        sorted_rows = sorted(rows, key=lambda row: _frame_sort_key(Path(row.original_path)))
+        group_paths = [Path(row.original_path) for row in sorted_rows]
+        frame_counts = [row.frame_count for row in sorted_rows]
+        effective_layout = txt_layout if txt_layout != "auto" else _detect_txt_layout(group_paths, frame_counts)
+
+        if effective_layout == "sequence_per_file":
+            for row in sorted_rows:
+                assembled.append((row, [Path(row.original_path)]))
+            continue
+
+        if effective_layout != "frame_per_file":
+            raise ValueError(f"Unsupported txt_layout: {effective_layout}")
+
+        base = sorted_rows[0]
+        frame_indices = [_frame_index(path) for path in group_paths]
+        known_indices = [index for index in frame_indices if index is not None]
+        missing_indices: list[int] = []
+        if known_indices:
+            expected = set(range(min(known_indices), max(known_indices) + 1))
+            missing_indices = sorted(expected - set(known_indices))
+            if missing_indices:
+                LOGGER.warning(
+                    "Detected %d missing frame files for group=%s in %s. Missing indices sample=%s",
+                    len(missing_indices),
+                    stem_prefix,
+                    parent,
+                    missing_indices[:10],
+                )
+
+        merged_metadata = dict(base.metadata)
+        merged_metadata["txt_layout"] = effective_layout
+        merged_metadata["sequence_prefix"] = stem_prefix
+        merged_metadata["source_parent"] = parent
+        merged_metadata["frame_file_count"] = len(group_paths)
+        merged_metadata["frame_files"] = [str(path) for path in group_paths]
+        if missing_indices:
+            merged_metadata["missing_frame_indices"] = missing_indices
+
+        merged_record = DatasetIndexRecord(
+            sample_id=f"{source_dataset}:{stem_prefix}",
+            source_dataset=base.source_dataset,
+            original_path=str(group_paths[0]),
+            label=label,
+            split=base.split,
+            synthetic_or_real=base.synthetic_or_real,
+            frame_count=len(group_paths),
+            track_id=base.track_id,
+            camera_name=base.camera_name,
+            frigate_event_id=base.frigate_event_id,
+            source_type=base.source_type,
+            metadata=merged_metadata,
+        )
+        assembled.append((merged_record, group_paths))
+    return assembled
+
+
+def _load_txt_sequence(paths: Sequence[Path], num_keypoints: int = 17) -> tuple[np.ndarray, list[dict[str, float]]]:
+    """Load one sequence from one-or-many txt files."""
+    if len(paths) == 1:
+        return parse_yolov8_pose_file(paths[0], num_keypoints=num_keypoints)
+
+    poses: list[np.ndarray] = []
+    bboxes: list[dict[str, float]] = []
+    for path in paths:
+        frame_seq, frame_bboxes = parse_yolov8_pose_file(path, num_keypoints=num_keypoints)
+        if frame_seq.shape[0] > 1:
+            LOGGER.warning("Frame txt contains %d rows in %s; using first row only", frame_seq.shape[0], path)
+        poses.append(frame_seq[0])
+        bboxes.append(frame_bboxes[0])
     return np.stack(poses, axis=0), bboxes
 
 
@@ -372,9 +491,34 @@ def plot_pose_sequence(
     plt.close(fig)
 
 
-def iter_pose_sequences(records: Sequence[DatasetIndexRecord]) -> Iterator[tuple[DatasetIndexRecord, np.ndarray, list[dict[str, float]] | None]]:
+def iter_pose_sequences(
+    records: Sequence[DatasetIndexRecord],
+    txt_layout: Literal["auto", "sequence_per_file", "frame_per_file"] = "sequence_per_file",
+) -> Iterator[tuple[DatasetIndexRecord, np.ndarray, list[dict[str, float]] | None]]:
     """Load and yield pose sequences, logging but skipping failures."""
-    for record in records:
+    yield from iter_pose_sequences_with_layout(records, txt_layout=txt_layout)
+
+
+def iter_pose_sequences_with_layout(
+    records: Sequence[DatasetIndexRecord],
+    txt_layout: Literal["auto", "sequence_per_file", "frame_per_file"] = "auto",
+) -> Iterator[tuple[DatasetIndexRecord, np.ndarray, list[dict[str, float]] | None]]:
+    """Load and yield pose sequences with configurable txt assembly layout."""
+    if txt_layout not in TXT_LAYOUT_VALUES:
+        raise ValueError(f"txt_layout must be one of {sorted(TXT_LAYOUT_VALUES)}, got {txt_layout!r}")
+
+    txt_records = [record for record in records if Path(record.original_path).suffix.lower() == ".txt"]
+    non_txt_records = [record for record in records if Path(record.original_path).suffix.lower() != ".txt"]
+    txt_units = _group_txt_records(txt_records, txt_layout=txt_layout)
+
+    for record, text_paths in txt_units:
+        try:
+            seq, bboxes = _load_txt_sequence(text_paths)
+            yield record, seq, bboxes
+        except Exception as exc:  # noqa: BLE001
+            LOGGER.warning("Skipping sample %s due to parsing error: %s", record.sample_id, exc)
+
+    for record in non_txt_records:
         try:
             seq, bboxes = load_pose_sequence(record)
             yield record, seq, bboxes

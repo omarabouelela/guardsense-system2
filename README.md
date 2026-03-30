@@ -23,6 +23,11 @@ This repository includes a full production Trigger baseline pipeline under `src/
 - `.npy`
 - `.hdf5` / `.h5`
 
+For `.txt` Trigger inputs, both layouts are supported:
+- `sequence_per_file`: one txt file contains many temporal rows.
+- `frame_per_file`: one txt file per frame, grouped deterministically by folder + filename prefix.
+- `auto`: detects likely layout (default).
+
 ### Implemented components
 - Dataset indexing and metadata generation
 - Pose parsing with malformed row handling
@@ -44,9 +49,16 @@ This repository includes a full production Trigger baseline pipeline under `src/
 ## Example commands
 
 ```bash
+# Both command styles are supported:
+# 1) module execution
 python -m src.scripts.prepare_trigger_data --config configs/trigger_data.yaml
 python -m src.scripts.train_trigger --config configs/trigger_train.yaml
 python -m src.scripts.eval_trigger --config configs/trigger_eval.yaml
+
+# 2) direct script execution
+python src/scripts/prepare_trigger_data.py --config configs/trigger_data.yaml
+python src/scripts/train_trigger.py --config configs/trigger_train.yaml
+python src/scripts/eval_trigger.py --config configs/trigger_eval.yaml
 ```
 
 ## Notes on Python compatibility
@@ -186,14 +198,14 @@ This keeps Frigate downstream integration intact and emits runtime outputs keyed
 
 ```bash
 python -m unittest discover -s tests
-python -m src.scripts.prepare_trigger_data --help
-python -m src.scripts.train_trigger --help
-python -m src.scripts.eval_trigger --help
-python -m src.scripts.prepare_verifier_data --help
-python -m src.scripts.train_verifier --help
-python -m src.scripts.eval_verifier --help
-python -m src.scripts.run_dual_inference --help
-python -m src.scripts.run_full_pipeline --help
+python src/scripts/prepare_trigger_data.py --help
+python src/scripts/train_trigger.py --help
+python src/scripts/eval_trigger.py --help
+python src/scripts/prepare_verifier_data.py --help
+python src/scripts/train_verifier.py --help
+python src/scripts/eval_verifier.py --help
+python src/scripts/run_dual_inference.py --help
+python src/scripts/run_full_pipeline.py --help
 python -m src.scripts.run_dual_inference --config configs/fusion_runtime.yaml --event-json configs/fusion_example_event.json --output-dir artifacts/fusion_dry_run --dry-run
 python -m src.scripts.run_full_pipeline --config configs/runtime.yaml --output-dir artifacts/full_pipeline_dry_run --dry-run
 ```

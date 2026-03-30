@@ -10,6 +10,13 @@ from typing import Any
 
 import yaml
 
+try:
+    from ._bootstrap import ensure_project_root_on_path
+except ImportError:  # direct script execution
+    from _bootstrap import ensure_project_root_on_path
+
+ensure_project_root_on_path()
+
 from src.common.runtime_utils import resolve_checkpoint_path
 from src.data.video_preprocess import VideoProcessConfig
 from src.fusion.decision_logic import FusionRuntime, FusionRuntimeConfig, FusionThresholds, RuntimeStats, update_stats

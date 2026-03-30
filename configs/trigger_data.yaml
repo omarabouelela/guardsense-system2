@@ -1,4 +1,5 @@
 output_dir: artifacts/trigger_data
+txt_layout: auto
 normalization:
   mode: frame
   frame_width: 1920
