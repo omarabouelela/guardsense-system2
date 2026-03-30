@@ -15,7 +15,7 @@ This repository contains GuardSense Fit System 2, a dual-model classroom violenc
 - Keep the repository modular and production-oriented.
 
 ## Engineering rules
-- Python 3.11
+- Python 3.12.3
 - PyTorch
 - pathlib
 - type hints
