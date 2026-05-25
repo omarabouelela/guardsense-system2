@@ -1,0 +1,68 @@
+mode: real_only_binary
+output_dir: artifacts/verifier_data_rwf_only
+label_map:
+  "0": normal
+  "1": fight
+
+sources:
+  - name: rwf2000_real
+    enabled: true
+    paths:
+      - D:\GuardSense_Datasets\datasets\raw\rwf2000\videos
+    synthetic_or_real: real
+    label_rules:
+      fight: 1
+      nonfight: 0
+
+  - name: airtlab_nonfight
+    enabled: false
+    paths:
+      - D:\GuardSense_Datasets\datasets\raw\airtlab\videos
+    synthetic_or_real: real
+    label: 0
+
+  - name: airtlab_acted_fight_optional
+    enabled: false
+    paths:
+      - D:\GuardSense_Datasets\datasets\raw\airtlab\videos\acted_fight
+    synthetic_or_real: real
+    label: 1
+
+  - name: classroom_hard_negative
+    enabled: false
+    paths:
+      - D:\GuardSense_Datasets\datasets\raw\classroom_hard_negative\videos
+    synthetic_or_real: real
+    label: 0
+
+  - name: xd_violence_selected_optional
+    enabled: false
+    paths:
+      - D:\GuardSense_Datasets\datasets\raw\xd_violence\selected_clips
+    synthetic_or_real: real
+    label: 1
+
+validation:
+  min_duration_seconds: 1.5
+  flag_dark: true
+  dark_luma_threshold: 35.0
+  flag_blurry: true
+  blurry_laplacian_var_threshold: 30.0
+
+processing:
+  target_fps: 30
+  target_duration_seconds: 3.0
+  min_duration_seconds: 2.0
+  max_duration_seconds: 4.0
+  target_width: 640
+  target_height: 360
+  target_codec: libx264
+  crf: 23
+  preset: fast
+
+split:
+  train_ratio: 0.7
+  val_ratio: 0.15
+  test_ratio: 0.15
+  seed: 42
+  source_aware: true

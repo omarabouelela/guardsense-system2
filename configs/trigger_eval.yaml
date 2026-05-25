@@ -1,0 +1,8 @@
+# You can keep this on latest/best_model.pt; eval code also falls back to
+# newest valid trigger_* checkpoint if latest alias is missing.
+model_path: artifacts/runs/latest/best_model.pt
+dataset_path: artifacts/trigger_data/trigger_dataset.hdf5
+split: test
+batch_size: 128
+device: cpu
+output_path: artifacts/runs/latest/eval_metrics.json

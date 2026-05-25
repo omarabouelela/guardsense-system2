@@ -1,0 +1,56 @@
+mode: real_only_binary
+output_dir: artifacts/trigger_data
+txt_layout: auto
+label_map:
+  "0": normal
+  "1": fight
+normalization:
+  mode: frame
+  frame_width: 1920
+  frame_height: 1080
+temporal:
+  window_size: 32
+  overlap: 0.5
+  short_policy: pad
+split:
+  train_ratio: 0.7
+  val_ratio: 0.15
+  test_ratio: 0.15
+  seed: 42
+  source_aware: true
+sources:
+  - name: rwf2000_nonfight
+    paths:
+      - D:\GuardSense_Datasets\datasets\raw\rwf2000\pose\nonfight
+    label: 0
+    synthetic_or_real: real
+
+  - name: rwf2000_fight
+    paths:
+      - D:\GuardSense_Datasets\datasets\raw\rwf2000\pose\fight
+    label: 1
+    synthetic_or_real: real
+
+  - name: airtlab_nonfight
+    paths:
+      - D:\GuardSense_Datasets\datasets\raw\airtlab\pose\nonfight
+    label: 0
+    synthetic_or_real: real
+
+  - name: airtlab_fight_optional
+    paths:
+      - D:\GuardSense_Datasets\datasets\raw\airtlab\pose\fight
+    label: 1
+    synthetic_or_real: real
+
+  - name: classroom_hard_negative
+    paths:
+      - D:\GuardSense_Datasets\datasets\raw\classroom_hard_negative\pose
+    label: 0
+    synthetic_or_real: real
+
+  - name: xd_violence_selected_optional
+    paths:
+      - D:\GuardSense_Datasets\datasets\raw\xd_violence\pose
+    label: 1
+    synthetic_or_real: real

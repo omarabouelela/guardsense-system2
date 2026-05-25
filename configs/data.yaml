@@ -1,0 +1,2 @@
+trigger_data_config: configs/trigger_data.yaml
+verifier_data_config: configs/verifier_data.yaml

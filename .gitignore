@@ -1,0 +1,17 @@
+artifacts/
+datasets/
+*.pt
+*.pth
+*.hdf5
+*.h5
+*.avi
+*.mp4
+*.mov
+*.mkv
+*.npy
+*.npz
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env

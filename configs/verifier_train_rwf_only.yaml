@@ -1,0 +1,25 @@
+mode: real_only_binary
+# Produces timestamped run dirs like:
+# artifacts/verifier_runs/verifier_binary_real_only_<backbone>_<UTC_TIMESTAMP>/
+manifest_path: artifacts/verifier_data_rwf_only/split_manifest.csv
+output_dir: artifacts/verifier_runs_rwf_only
+batch_size: 2
+epochs: 5
+lr: 0.0001
+weight_decay: 0.0001
+patience: 5
+seed: 42
+num_workers: 0
+device: cuda
+mixed_precision: true
+
+model:
+  backbone: r3d_18
+  num_classes: 2
+  pretrained: false
+  dropout: 0.2
+
+data:
+  num_frames: 16
+  temporal_stride: 2
+  random_sample: true

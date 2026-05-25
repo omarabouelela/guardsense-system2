@@ -1,0 +1,18 @@
+{
+  "event_id": "offline_rwf_fight_001",
+  "camera_name": "offline_rwf",
+  "timestamp_start": 0.0,
+  "timestamp_end": 3.0,
+  "tracked_label": "person",
+  "track_id": "rwf_test_001",
+  "snapshot_path": null,
+  "clip_path": "D:\\GuardSense_Datasets\\datasets\\raw\\rwf2000\\videos\\train\\Fight\\-1l5631l3fg_0.avi",
+  "recording_path": null,
+  "pose_input_path": "D:\\GuardSense_Datasets\\datasets\\raw\\rwf2000\\pose\\fight\\train__Fight__-1l5631l3fg_0.txt",
+  "source": "offline_rwf_test",
+  "metadata": {
+    "expected_label": 1,
+    "expected_label_name": "fight",
+    "dataset": "rwf2000"
+  }
+}

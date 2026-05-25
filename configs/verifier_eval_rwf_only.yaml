@@ -1,0 +1,8 @@
+model_path: artifacts/verifier_runs_rwf_only/latest/best_model.pt
+manifest_path: artifacts/verifier_data_rwf_only/split_manifest.csv
+split: test
+batch_size: 8
+device: cuda
+num_frames: 16
+temporal_stride: 2
+output_path: artifacts/verifier_runs_rwf_only/latest/eval_metrics.json

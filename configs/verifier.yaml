@@ -1,0 +1,4 @@
+extends: configs/base.yaml
+data_config: configs/verifier_data.yaml
+train_config: configs/verifier_train.yaml
+eval_config: configs/verifier_eval.yaml

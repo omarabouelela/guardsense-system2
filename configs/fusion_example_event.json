@@ -1,0 +1,17 @@
+{
+  "event_id": "1709851020.457391-abc123",
+  "camera_name": "classroom_a",
+  "timestamp_start": 1709851020.45,
+  "timestamp_end": 1709851024.22,
+  "tracked_label": "person",
+  "track_id": "23",
+  "snapshot_path": "/media/frigate/clips/classroom_a-1709851020.457391-abc123.jpg",
+  "clip_path": "/media/frigate/clips/classroom_a-1709851020.457391-abc123.mp4",
+  "recording_path": "/media/frigate/recordings/2026-03-30/classroom_a/09.00.mp4",
+  "pose_input_path": "/data/pose_exports/1709851020.457391-abc123.npy",
+  "source": "frigate_api",
+  "metadata": {
+    "zone": "north_door",
+    "frigate_severity": "alert"
+  }
+}

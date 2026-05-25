@@ -1,0 +1,384 @@
+{
+  "events": [
+    {
+      "event_id": "offline_rwf_val_fight_000",
+      "camera_name": "offline_rwf",
+      "timestamp_start": 0.0,
+      "timestamp_end": 3.0,
+      "tracked_label": "person",
+      "track_id": "val_fight_000",
+      "snapshot_path": null,
+      "clip_path": "D:\\GuardSense_Datasets\\datasets\\raw\\rwf2000\\videos\\val\\Fight\\g6jdqkcdgqk_4.avi",
+      "recording_path": null,
+      "pose_input_path": "D:\\GuardSense_Datasets\\datasets\\raw\\rwf2000\\pose\\fight\\val__Fight__g6jdqkcdgqk_4.txt",
+      "source": "offline_rwf_random_batch",
+      "metadata": {
+        "expected_label": 1,
+        "expected_label_name": "Fight",
+        "dataset": "rwf2000",
+        "split": "val"
+      }
+    },
+    {
+      "event_id": "offline_rwf_val_fight_001",
+      "camera_name": "offline_rwf",
+      "timestamp_start": 0.0,
+      "timestamp_end": 3.0,
+      "tracked_label": "person",
+      "track_id": "val_fight_001",
+      "snapshot_path": null,
+      "clip_path": "D:\\GuardSense_Datasets\\datasets\\raw\\rwf2000\\videos\\val\\Fight\\YDOJvzChqSg_3.avi",
+      "recording_path": null,
+      "pose_input_path": "D:\\GuardSense_Datasets\\datasets\\raw\\rwf2000\\pose\\fight\\val__Fight__YDOJvzChqSg_3.txt",
+      "source": "offline_rwf_random_batch",
+      "metadata": {
+        "expected_label": 1,
+        "expected_label_name": "Fight",
+        "dataset": "rwf2000",
+        "split": "val"
+      }
+    },
+    {
+      "event_id": "offline_rwf_val_fight_002",
+      "camera_name": "offline_rwf",
+      "timestamp_start": 0.0,
+      "timestamp_end": 3.0,
+      "tracked_label": "person",
+      "track_id": "val_fight_002",
+      "snapshot_path": null,
+      "clip_path": "D:\\GuardSense_Datasets\\datasets\\raw\\rwf2000\\videos\\val\\Fight\\nuf-d5GugL0_4.avi",
+      "recording_path": null,
+      "pose_input_path": "D:\\GuardSense_Datasets\\datasets\\raw\\rwf2000\\pose\\fight\\val__Fight__nuf-d5GugL0_4.txt",
+      "source": "offline_rwf_random_batch",
+      "metadata": {
+        "expected_label": 1,
+        "expected_label_name": "Fight",
+        "dataset": "rwf2000",
+        "split": "val"
+      }
+    },
+    {
+      "event_id": "offline_rwf_val_fight_003",
+      "camera_name": "offline_rwf",
+      "timestamp_start": 0.0,
+      "timestamp_end": 3.0,
+      "tracked_label": "person",
+      "track_id": "val_fight_003",
+      "snapshot_path": null,
+      "clip_path": "D:\\GuardSense_Datasets\\datasets\\raw\\rwf2000\\videos\\val\\Fight\\y_vX9FtjLaQ_4.avi",
+      "recording_path": null,
+      "pose_input_path": "D:\\GuardSense_Datasets\\datasets\\raw\\rwf2000\\pose\\fight\\val__Fight__y_vX9FtjLaQ_4.txt",
+      "source": "offline_rwf_random_batch",
+      "metadata": {
+        "expected_label": 1,
+        "expected_label_name": "Fight",
+        "dataset": "rwf2000",
+        "split": "val"
+      }
+    },
+    {
+      "event_id": "offline_rwf_val_fight_004",
+      "camera_name": "offline_rwf",
+      "timestamp_start": 0.0,
+      "timestamp_end": 3.0,
+      "tracked_label": "person",
+      "track_id": "val_fight_004",
+      "snapshot_path": null,
+      "clip_path": "D:\\GuardSense_Datasets\\datasets\\raw\\rwf2000\\videos\\val\\Fight\\nVdn1krnTCQ_6.avi",
+      "recording_path": null,
+      "pose_input_path": "D:\\GuardSense_Datasets\\datasets\\raw\\rwf2000\\pose\\fight\\val__Fight__nVdn1krnTCQ_6.txt",
+      "source": "offline_rwf_random_batch",
+      "metadata": {
+        "expected_label": 1,
+        "expected_label_name": "Fight",
+        "dataset": "rwf2000",
+        "split": "val"
+      }
+    },
+    {
+      "event_id": "offline_rwf_val_fight_005",
+      "camera_name": "offline_rwf",
+      "timestamp_start": 0.0,
+      "timestamp_end": 3.0,
+      "tracked_label": "person",
+      "track_id": "val_fight_005",
+      "snapshot_path": null,
+      "clip_path": "D:\\GuardSense_Datasets\\datasets\\raw\\rwf2000\\videos\\val\\Fight\\qaAclucigpY_3.avi",
+      "recording_path": null,
+      "pose_input_path": "D:\\GuardSense_Datasets\\datasets\\raw\\rwf2000\\pose\\fight\\val__Fight__qaAclucigpY_3.txt",
+      "source": "offline_rwf_random_batch",
+      "metadata": {
+        "expected_label": 1,
+        "expected_label_name": "Fight",
+        "dataset": "rwf2000",
+        "split": "val"
+      }
+    },
+    {
+      "event_id": "offline_rwf_val_fight_006",
+      "camera_name": "offline_rwf",
+      "timestamp_start": 0.0,
+      "timestamp_end": 3.0,
+      "tracked_label": "person",
+      "track_id": "val_fight_006",
+      "snapshot_path": null,
+      "clip_path": "D:\\GuardSense_Datasets\\datasets\\raw\\rwf2000\\videos\\val\\Fight\\1MVS2QPWbHc_4.avi",
+      "recording_path": null,
+      "pose_input_path": "D:\\GuardSense_Datasets\\datasets\\raw\\rwf2000\\pose\\fight\\val__Fight__1MVS2QPWbHc_4.txt",
+      "source": "offline_rwf_random_batch",
+      "metadata": {
+        "expected_label": 1,
+        "expected_label_name": "Fight",
+        "dataset": "rwf2000",
+        "split": "val"
+      }
+    },
+    {
+      "event_id": "offline_rwf_val_fight_007",
+      "camera_name": "offline_rwf",
+      "timestamp_start": 0.0,
+      "timestamp_end": 3.0,
+      "tracked_label": "person",
+      "track_id": "val_fight_007",
+      "snapshot_path": null,
+      "clip_path": "D:\\GuardSense_Datasets\\datasets\\raw\\rwf2000\\videos\\val\\Fight\\0Ow4cotKOuw_2.avi",
+      "recording_path": null,
+      "pose_input_path": "D:\\GuardSense_Datasets\\datasets\\raw\\rwf2000\\pose\\fight\\val__Fight__0Ow4cotKOuw_2.txt",
+      "source": "offline_rwf_random_batch",
+      "metadata": {
+        "expected_label": 1,
+        "expected_label_name": "Fight",
+        "dataset": "rwf2000",
+        "split": "val"
+      }
+    },
+    {
+      "event_id": "offline_rwf_val_fight_008",
+      "camera_name": "offline_rwf",
+      "timestamp_start": 0.0,
+      "timestamp_end": 3.0,
+      "tracked_label": "person",
+      "track_id": "val_fight_008",
+      "snapshot_path": null,
+      "clip_path": "D:\\GuardSense_Datasets\\datasets\\raw\\rwf2000\\videos\\val\\Fight\\g6jdqkcdgqk_2.avi",
+      "recording_path": null,
+      "pose_input_path": "D:\\GuardSense_Datasets\\datasets\\raw\\rwf2000\\pose\\fight\\val__Fight__g6jdqkcdgqk_2.txt",
+      "source": "offline_rwf_random_batch",
+      "metadata": {
+        "expected_label": 1,
+        "expected_label_name": "Fight",
+        "dataset": "rwf2000",
+        "split": "val"
+      }
+    },
+    {
+      "event_id": "offline_rwf_val_fight_009",
+      "camera_name": "offline_rwf",
+      "timestamp_start": 0.0,
+      "timestamp_end": 3.0,
+      "tracked_label": "person",
+      "track_id": "val_fight_009",
+      "snapshot_path": null,
+      "clip_path": "D:\\GuardSense_Datasets\\datasets\\raw\\rwf2000\\videos\\val\\Fight\\e5Dmmply_2.avi",
+      "recording_path": null,
+      "pose_input_path": "D:\\GuardSense_Datasets\\datasets\\raw\\rwf2000\\pose\\fight\\val__Fight__e5Dmmply_2.txt",
+      "source": "offline_rwf_random_batch",
+      "metadata": {
+        "expected_label": 1,
+        "expected_label_name": "Fight",
+        "dataset": "rwf2000",
+        "split": "val"
+      }
+    },
+    {
+      "event_id": "offline_rwf_val_nonfight_000",
+      "camera_name": "offline_rwf",
+      "timestamp_start": 0.0,
+      "timestamp_end": 3.0,
+      "tracked_label": "person",
+      "track_id": "val_nonfight_000",
+      "snapshot_path": null,
+      "clip_path": "D:\\GuardSense_Datasets\\datasets\\raw\\rwf2000\\videos\\val\\NonFight\\IMA4zYs83Lo_0.avi",
+      "recording_path": null,
+      "pose_input_path": "D:\\GuardSense_Datasets\\datasets\\raw\\rwf2000\\pose\\nonfight\\val__NonFight__IMA4zYs83Lo_0.txt",
+      "source": "offline_rwf_random_batch",
+      "metadata": {
+        "expected_label": 0,
+        "expected_label_name": "NonFight",
+        "dataset": "rwf2000",
+        "split": "val"
+      }
+    },
+    {
+      "event_id": "offline_rwf_val_nonfight_001",
+      "camera_name": "offline_rwf",
+      "timestamp_start": 0.0,
+      "timestamp_end": 3.0,
+      "tracked_label": "person",
+      "track_id": "val_nonfight_001",
+      "snapshot_path": null,
+      "clip_path": "D:\\GuardSense_Datasets\\datasets\\raw\\rwf2000\\videos\\val\\NonFight\\MxkTo5F-nvU_0.avi",
+      "recording_path": null,
+      "pose_input_path": "D:\\GuardSense_Datasets\\datasets\\raw\\rwf2000\\pose\\nonfight\\val__NonFight__MxkTo5F-nvU_0.txt",
+      "source": "offline_rwf_random_batch",
+      "metadata": {
+        "expected_label": 0,
+        "expected_label_name": "NonFight",
+        "dataset": "rwf2000",
+        "split": "val"
+      }
+    },
+    {
+      "event_id": "offline_rwf_val_nonfight_002",
+      "camera_name": "offline_rwf",
+      "timestamp_start": 0.0,
+      "timestamp_end": 3.0,
+      "tracked_label": "person",
+      "track_id": "val_nonfight_002",
+      "snapshot_path": null,
+      "clip_path": "D:\\GuardSense_Datasets\\datasets\\raw\\rwf2000\\videos\\val\\NonFight\\UoS3KEYq_0.avi",
+      "recording_path": null,
+      "pose_input_path": "D:\\GuardSense_Datasets\\datasets\\raw\\rwf2000\\pose\\nonfight\\val__NonFight__UoS3KEYq_0.txt",
+      "source": "offline_rwf_random_batch",
+      "metadata": {
+        "expected_label": 0,
+        "expected_label_name": "NonFight",
+        "dataset": "rwf2000",
+        "split": "val"
+      }
+    },
+    {
+      "event_id": "offline_rwf_val_nonfight_003",
+      "camera_name": "offline_rwf",
+      "timestamp_start": 0.0,
+      "timestamp_end": 3.0,
+      "tracked_label": "person",
+      "track_id": "val_nonfight_003",
+      "snapshot_path": null,
+      "clip_path": "D:\\GuardSense_Datasets\\datasets\\raw\\rwf2000\\videos\\val\\NonFight\\VIPpAkyG_0.avi",
+      "recording_path": null,
+      "pose_input_path": "D:\\GuardSense_Datasets\\datasets\\raw\\rwf2000\\pose\\nonfight\\val__NonFight__VIPpAkyG_0.txt",
+      "source": "offline_rwf_random_batch",
+      "metadata": {
+        "expected_label": 0,
+        "expected_label_name": "NonFight",
+        "dataset": "rwf2000",
+        "split": "val"
+      }
+    },
+    {
+      "event_id": "offline_rwf_val_nonfight_004",
+      "camera_name": "offline_rwf",
+      "timestamp_start": 0.0,
+      "timestamp_end": 3.0,
+      "tracked_label": "person",
+      "track_id": "val_nonfight_004",
+      "snapshot_path": null,
+      "clip_path": "D:\\GuardSense_Datasets\\datasets\\raw\\rwf2000\\videos\\val\\NonFight\\QRJFLxqK_0.avi",
+      "recording_path": null,
+      "pose_input_path": "D:\\GuardSense_Datasets\\datasets\\raw\\rwf2000\\pose\\nonfight\\val__NonFight__QRJFLxqK_0.txt",
+      "source": "offline_rwf_random_batch",
+      "metadata": {
+        "expected_label": 0,
+        "expected_label_name": "NonFight",
+        "dataset": "rwf2000",
+        "split": "val"
+      }
+    },
+    {
+      "event_id": "offline_rwf_val_nonfight_005",
+      "camera_name": "offline_rwf",
+      "timestamp_start": 0.0,
+      "timestamp_end": 3.0,
+      "tracked_label": "person",
+      "track_id": "val_nonfight_005",
+      "snapshot_path": null,
+      "clip_path": "D:\\GuardSense_Datasets\\datasets\\raw\\rwf2000\\videos\\val\\NonFight\\mwuiYEBdkJs_0.avi",
+      "recording_path": null,
+      "pose_input_path": "D:\\GuardSense_Datasets\\datasets\\raw\\rwf2000\\pose\\nonfight\\val__NonFight__mwuiYEBdkJs_0.txt",
+      "source": "offline_rwf_random_batch",
+      "metadata": {
+        "expected_label": 0,
+        "expected_label_name": "NonFight",
+        "dataset": "rwf2000",
+        "split": "val"
+      }
+    },
+    {
+      "event_id": "offline_rwf_val_nonfight_006",
+      "camera_name": "offline_rwf",
+      "timestamp_start": 0.0,
+      "timestamp_end": 3.0,
+      "tracked_label": "person",
+      "track_id": "val_nonfight_006",
+      "snapshot_path": null,
+      "clip_path": "D:\\GuardSense_Datasets\\datasets\\raw\\rwf2000\\videos\\val\\NonFight\\VtIQbKvy_0.avi",
+      "recording_path": null,
+      "pose_input_path": "D:\\GuardSense_Datasets\\datasets\\raw\\rwf2000\\pose\\nonfight\\val__NonFight__VtIQbKvy_0.txt",
+      "source": "offline_rwf_random_batch",
+      "metadata": {
+        "expected_label": 0,
+        "expected_label_name": "NonFight",
+        "dataset": "rwf2000",
+        "split": "val"
+      }
+    },
+    {
+      "event_id": "offline_rwf_val_nonfight_007",
+      "camera_name": "offline_rwf",
+      "timestamp_start": 0.0,
+      "timestamp_end": 3.0,
+      "tracked_label": "person",
+      "track_id": "val_nonfight_007",
+      "snapshot_path": null,
+      "clip_path": "D:\\GuardSense_Datasets\\datasets\\raw\\rwf2000\\videos\\val\\NonFight\\utRmPckr_0.avi",
+      "recording_path": null,
+      "pose_input_path": "D:\\GuardSense_Datasets\\datasets\\raw\\rwf2000\\pose\\nonfight\\val__NonFight__utRmPckr_0.txt",
+      "source": "offline_rwf_random_batch",
+      "metadata": {
+        "expected_label": 0,
+        "expected_label_name": "NonFight",
+        "dataset": "rwf2000",
+        "split": "val"
+      }
+    },
+    {
+      "event_id": "offline_rwf_val_nonfight_008",
+      "camera_name": "offline_rwf",
+      "timestamp_start": 0.0,
+      "timestamp_end": 3.0,
+      "tracked_label": "person",
+      "track_id": "val_nonfight_008",
+      "snapshot_path": null,
+      "clip_path": "D:\\GuardSense_Datasets\\datasets\\raw\\rwf2000\\videos\\val\\NonFight\\RIXaF_TkLlU_2.avi",
+      "recording_path": null,
+      "pose_input_path": "D:\\GuardSense_Datasets\\datasets\\raw\\rwf2000\\pose\\nonfight\\val__NonFight__RIXaF_TkLlU_2.txt",
+      "source": "offline_rwf_random_batch",
+      "metadata": {
+        "expected_label": 0,
+        "expected_label_name": "NonFight",
+        "dataset": "rwf2000",
+        "split": "val"
+      }
+    },
+    {
+      "event_id": "offline_rwf_val_nonfight_009",
+      "camera_name": "offline_rwf",
+      "timestamp_start": 0.0,
+      "timestamp_end": 3.0,
+      "tracked_label": "person",
+      "track_id": "val_nonfight_009",
+      "snapshot_path": null,
+      "clip_path": "D:\\GuardSense_Datasets\\datasets\\raw\\rwf2000\\videos\\val\\NonFight\\I9OYGpUd_0.avi",
+      "recording_path": null,
+      "pose_input_path": "D:\\GuardSense_Datasets\\datasets\\raw\\rwf2000\\pose\\nonfight\\val__NonFight__I9OYGpUd_0.txt",
+      "source": "offline_rwf_random_batch",
+      "metadata": {
+        "expected_label": 0,
+        "expected_label_name": "NonFight",
+        "dataset": "rwf2000",
+        "split": "val"
+      }
+    }
+  ]
+}

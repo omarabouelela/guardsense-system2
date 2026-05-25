@@ -1,0 +1,21 @@
+mode: real_only_binary
+# Produces timestamped run dirs like:
+# artifacts/runs/trigger_binary_real_only_<architecture>_<UTC_TIMESTAMP>/
+dataset_path: artifacts/trigger_data_rwf_only/trigger_dataset.hdf5
+output_dir: artifacts/runs_rwf_only
+batch_size: 64
+epochs: 40
+lr: 0.001
+weight_decay: 0.0001
+patience: 8
+seed: 42
+num_workers: 0
+device: cuda
+class_weights: [1.0, 1.2]
+model:
+  architecture: temporal_cnn
+  num_keypoints: 17
+  num_channels: 3
+  num_classes: 2
+  hidden_size: 128
+  dropout: 0.2
