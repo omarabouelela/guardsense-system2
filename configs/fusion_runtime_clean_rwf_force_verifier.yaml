@@ -13,6 +13,19 @@ runtime:
   extraction_dir: "extracted_clips"
   drop_trigger_normal_early: false
 
+trigger_inference:
+  normalization:
+    mode: frame
+    frame_width: 1920
+    frame_height: 1080
+  temporal:
+    window_size: 32
+    overlap: 0.5
+    short_policy: pad
+  fight_class_id: 1
+  top_k: 3
+  include_window_debug: false
+
 thresholds:
   trigger_escalation_threshold: 0.55
   trigger_force_verify_threshold: 0.75

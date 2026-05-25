@@ -109,6 +109,10 @@ class FusionDecision:
     trigger_probs: dict[str, float] | None
     trigger_label: int | None
     trigger_confidence: float | None
+    number_of_windows: int | None
+    max_fight_probability: float | None
+    topk_mean_fight_probability: float | None
+    window_debug: list[dict[str, float | int]] | None
     verifier_probs: dict[str, float] | None
     verifier_label: int | None
     verifier_confidence: float | None

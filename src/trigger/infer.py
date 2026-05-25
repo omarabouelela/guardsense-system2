@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, Sequence
 
 import numpy as np
 import torch
@@ -47,6 +47,84 @@ class InferenceConfig:
     device: str = "auto"
     normalization: NormalizationConfig = field(default_factory=NormalizationConfig)
     temporal: SequenceAssemblyConfig = field(default_factory=SequenceAssemblyConfig)
+    fight_class_id: int = 1
+    top_k: int = 3
+    include_window_debug: bool = False
+
+    def __post_init__(self) -> None:
+        """Keep runtime aggregation knobs in a valid range."""
+        if self.fight_class_id < 0:
+            raise ValueError("fight_class_id must be non-negative")
+        if self.top_k < 1:
+            raise ValueError("top_k must be >= 1")
+
+
+def prepare_trigger_windows(
+    sequence: np.ndarray,
+    normalization: NormalizationConfig,
+    temporal: SequenceAssemblyConfig,
+    bboxes: Sequence[dict[str, float]] | None = None,
+) -> np.ndarray:
+    """Apply training-compatible normalization and temporal windowing."""
+    normalized = apply_normalization(sequence, normalization, bboxes=bboxes)
+    return temporal_windows(normalized, temporal).astype(np.float32, copy=False)
+
+
+def aggregate_window_probabilities(
+    window_probs: np.ndarray,
+    *,
+    num_classes: int,
+    fight_class_id: int = 1,
+    top_k: int = 3,
+    include_window_debug: bool = False,
+) -> dict[str, Any]:
+    """Aggregate per-window Trigger probabilities into an event-level output.
+
+    Binary runtime uses class 1 as fight and promotes the maximum fight
+    probability to the event score so short fight windows are not averaged away.
+    """
+    probs = np.asarray(window_probs, dtype=np.float32)
+    if probs.ndim != 2:
+        raise ValueError(f"Expected window probabilities with shape (N,C), got {probs.shape}")
+    if probs.shape[0] == 0:
+        raise ValueError("No valid trigger windows available for aggregation")
+    if probs.shape[1] != num_classes:
+        raise ValueError(f"Expected {num_classes} probability columns, got {probs.shape[1]}")
+    if fight_class_id >= num_classes:
+        raise ValueError(f"fight_class_id={fight_class_id} is outside num_classes={num_classes}")
+
+    fight_probs = probs[:, fight_class_id]
+    best_window_idx = int(np.argmax(fight_probs))
+    max_fight_probability = float(fight_probs[best_window_idx])
+    effective_top_k = min(max(int(top_k), 1), int(fight_probs.shape[0]))
+    topk_mean_fight_probability = float(np.mean(np.sort(fight_probs)[-effective_top_k:]))
+
+    event_probs = probs[best_window_idx].astype(np.float32, copy=True)
+    if num_classes == 2 and fight_class_id == 1:
+        event_probs[1] = max_fight_probability
+        event_probs[0] = 1.0 - max_fight_probability
+
+    predicted_label = int(np.argmax(event_probs))
+    confidence = float(event_probs[predicted_label])
+    class_probabilities = {str(class_id): float(event_probs[class_id]) for class_id in range(num_classes)}
+
+    output: dict[str, Any] = {
+        "class_probabilities": class_probabilities,
+        "trigger_probs": class_probabilities,
+        "predicted_label": predicted_label,
+        "trigger_label": predicted_label,
+        "confidence": confidence,
+        "trigger_confidence": confidence,
+        "number_of_windows": int(probs.shape[0]),
+        "max_fight_probability": max_fight_probability,
+        "topk_mean_fight_probability": topk_mean_fight_probability,
+    }
+    if include_window_debug:
+        output["window_debug"] = [
+            {"window_index": int(window_idx), "prob_1": float(prob)}
+            for window_idx, prob in enumerate(fight_probs)
+        ]
+    return output
 
 
 def parse_frigate_payload(payload: dict[str, Any]) -> FrigateEvent:
@@ -80,6 +158,10 @@ class TriggerInferencer:
         self.model.load_state_dict(checkpoint["model_state_dict"])
         self.model.eval()
         self.num_classes = int(model_cfg.num_classes)
+        if self.config.fight_class_id >= self.num_classes:
+            raise ValueError(
+                f"fight_class_id={self.config.fight_class_id} is outside checkpoint num_classes={self.num_classes}"
+            )
 
     def infer_tensor(
         self,
@@ -87,20 +169,42 @@ class TriggerInferencer:
         event: FrigateEvent | None = None,
         source_type: Literal["tensor", "pose_file", "frigate_event", "frigate_payload"] = "tensor",
     ) -> dict[str, Any]:
-        """Run inference on one sequence (T,K,C) or batched window (N,T,K,C)."""
+        """Run inference on one normalized sequence (T,K,C) or window batch (N,T,K,C)."""
         tensor = pose_tensor
         if tensor.ndim == 3:
             tensor = temporal_windows(tensor, self.config.temporal)
         if tensor.ndim != 4:
             raise ValueError(f"Expected tensor ndim=4 after windowing, got {tensor.ndim}")
+        return self._infer_windows(tensor, event=event, source_type=source_type)
+
+    def _infer_windows(
+        self,
+        windows: np.ndarray,
+        event: FrigateEvent | None,
+        source_type: Literal["tensor", "pose_file", "frigate_event", "frigate_payload"],
+    ) -> dict[str, Any]:
+        """Run the model over all prepared windows and build event output."""
+        if windows.ndim != 4:
+            raise ValueError(f"Expected prepared windows shape (N,T,K,C), got {windows.shape}")
+        if windows.shape[0] == 0:
+            raise ValueError("No valid trigger windows were generated for inference")
+        if windows.shape[1] != self.config.temporal.window_size:
+            raise ValueError(
+                f"Expected trigger window size {self.config.temporal.window_size}, got {windows.shape[1]}"
+            )
 
         with torch.no_grad():
-            x = torch.from_numpy(tensor).float().to(self.device)
+            x = torch.from_numpy(windows).float().to(self.device)
             logits = self.model(x)
-            probs = torch.softmax(logits, dim=-1).cpu().numpy()
-            probs_mean = probs.mean(axis=0)
-            pred = int(np.argmax(probs_mean))
-            conf = float(np.max(probs_mean))
+            window_probs = torch.softmax(logits, dim=-1).cpu().numpy()
+
+        aggregated = aggregate_window_probabilities(
+            window_probs,
+            num_classes=self.num_classes,
+            fight_class_id=self.config.fight_class_id,
+            top_k=self.config.top_k,
+            include_window_debug=self.config.include_window_debug,
+        )
 
         return {
             "event_id": event.event_id if event else "direct_input",
@@ -108,15 +212,16 @@ class TriggerInferencer:
             "track_id": event.track_id if event else None,
             "timestamp_start": event.timestamp_start if event else None,
             "timestamp_end": event.timestamp_end if event else None,
-            "class_probabilities": {str(class_id): float(probs_mean[class_id]) for class_id in range(self.num_classes)},
-            "predicted_label": pred,
-            "confidence": conf,
             "notes": "Real-only binary-first inference output; class ids are configuration-driven.",
             "source_type": source_type,
+            **aggregated,
         }
 
     def infer_pose_file(self, pose_file: Path, event: FrigateEvent | None = None) -> dict[str, Any]:
         """Run inference for a supported pose file path."""
+        pose_file = Path(pose_file)
+        if not pose_file.is_file():
+            raise FileNotFoundError(f"Pose file not found: {pose_file}")
         record = DatasetIndexRecord(
             sample_id=pose_file.stem,
             source_dataset="inference",
@@ -124,8 +229,13 @@ class TriggerInferencer:
             label=0,
         )
         sequence, bboxes = load_pose_sequence(record)
-        normalized = apply_normalization(sequence, self.config.normalization, bboxes=bboxes)
-        return self.infer_tensor(normalized, event=event, source_type="pose_file")
+        windows = prepare_trigger_windows(
+            sequence,
+            normalization=self.config.normalization,
+            temporal=self.config.temporal,
+            bboxes=bboxes,
+        )
+        return self._infer_windows(windows, event=event, source_type="pose_file")
 
     def infer_frigate_event(self, event: FrigateEvent) -> dict[str, Any]:
         """Run inference from FrigateEvent by resolving pose_input_path first."""

@@ -283,6 +283,10 @@ class FusionRuntime:
             trigger_probs=(trigger_out or {}).get("class_probabilities"),
             trigger_label=(trigger_out or {}).get("predicted_label"),
             trigger_confidence=(trigger_out or {}).get("confidence"),
+            number_of_windows=(trigger_out or {}).get("number_of_windows"),
+            max_fight_probability=(trigger_out or {}).get("max_fight_probability"),
+            topk_mean_fight_probability=(trigger_out or {}).get("topk_mean_fight_probability"),
+            window_debug=(trigger_out or {}).get("window_debug"),
             verifier_probs=(verifier_out or {}).get("class_probabilities"),
             verifier_label=(verifier_out or {}).get("predicted_label"),
             verifier_confidence=(verifier_out or {}).get("confidence"),
@@ -314,7 +318,7 @@ class FusionRuntime:
         if pred == 0 and conf >= 0.85:
             return ["trigger predicted normal with high confidence"]
         if pred == 1:
-            return ["trigger flagged pre-fight posture/tension"]
+            return ["trigger flagged fight posture"]
         if pred == 2:
             return ["trigger flagged aggressive posture"]
         return ["trigger output collected"]

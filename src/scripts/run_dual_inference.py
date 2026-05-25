@@ -18,6 +18,7 @@ except ImportError:  # direct script execution
 ensure_project_root_on_path()
 
 from src.common.runtime_utils import resolve_checkpoint_path
+from src.data.pose_preprocess import NormalizationConfig, SequenceAssemblyConfig
 from src.data.video_preprocess import VideoProcessConfig
 from src.fusion.decision_logic import FusionRuntime, FusionRuntimeConfig, FusionThresholds, RuntimeStats, update_stats
 from src.fusion.event_schema import FusionDecision, FusionEvent, load_json_events, load_manifest_csv
@@ -144,11 +145,17 @@ def build_inferencers(raw_cfg: dict[str, Any], dry_run: bool) -> tuple[Any, Any]
     verifier_model_path = str(
         resolve_checkpoint_path(verifier_model_path, base_dir="artifacts/verifier_runs", run_prefix="verifier_")
     )
+    trigger_inference_cfg = raw_cfg.get("trigger_inference") or {}
 
     trigger = TriggerInferencer(
         InferenceConfig(
             model_path=trigger_model_path,
             device=raw_cfg.get("runtime", {}).get("device", "auto"),
+            normalization=NormalizationConfig(**trigger_inference_cfg.get("normalization", {})),
+            temporal=SequenceAssemblyConfig(**trigger_inference_cfg.get("temporal", {})),
+            fight_class_id=trigger_inference_cfg.get("fight_class_id", 1),
+            top_k=trigger_inference_cfg.get("top_k", 3),
+            include_window_debug=trigger_inference_cfg.get("include_window_debug", False),
         )
     )
     verifier = VerifierInferencer(
