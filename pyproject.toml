@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "guardsense-system2"
+version = "0.1.0"
+description = "GuardSense Fit System 2 dual-model violence-prevention runtime"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "numpy>=1.26",
+  "pandas>=2.1",
+  "PyYAML>=6.0",
+  "h5py>=3.10",
+  "matplotlib>=3.8",
+  "torch>=2.2",
+  "torchvision>=0.17",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
