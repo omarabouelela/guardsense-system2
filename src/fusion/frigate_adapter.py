@@ -16,6 +16,7 @@ from src.fusion.event_schema import FusionEvent
 
 LOGGER = logging.getLogger(__name__)
 FRIGATE_CLIP_METADATA_KEY = "frigate_clip_download"
+FRIGATE_POSE_METADATA_KEY = "frigate_pose_extraction"
 _SAFE_FILENAME_RE = re.compile(r"[^A-Za-z0-9_.-]+")
 
 
@@ -66,6 +67,11 @@ class FrigateAdapter:
         """Return the local runtime path for a downloaded Frigate clip."""
         safe_event_id = _safe_filename_token(event_id)
         return output_dir / f"frigate_{safe_event_id}_clip.mp4"
+
+    def pose_output_path(self, event_id: str, output_dir: Path) -> Path:
+        """Return the local runtime path for a Frigate event pose sequence."""
+        safe_event_id = _safe_filename_token(event_id)
+        return output_dir / "extracted_pose" / f"{safe_event_id}.txt"
 
     def attach_event_clip(self, event: FusionEvent, output_dir: Path, dry_run: bool = False) -> FusionEvent:
         """Download or plan a Frigate event clip and attach it to the event."""

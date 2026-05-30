@@ -18,11 +18,12 @@ except ImportError:  # direct script execution
 ensure_project_root_on_path()
 
 from src.common.runtime_utils import resolve_checkpoint_path
+from src.data.pose_extraction import PoseExtractorConfig, extract_video_pose, load_yolo_model
 from src.data.pose_preprocess import NormalizationConfig, SequenceAssemblyConfig
 from src.data.video_preprocess import VideoProcessConfig
 from src.fusion.decision_logic import FusionRuntime, FusionRuntimeConfig, FusionThresholds, RuntimeStats, update_stats
 from src.fusion.event_schema import FusionDecision, FusionEvent, load_json_events, load_manifest_csv
-from src.fusion.frigate_adapter import FrigateAdapter, FrigateAdapterConfig
+from src.fusion.frigate_adapter import FRIGATE_POSE_METADATA_KEY, FrigateAdapter, FrigateAdapterConfig
 from src.trigger.infer import InferenceConfig, TriggerInferencer
 from src.verifier.infer import VerifierInferenceConfig, VerifierInferencer
 
@@ -113,11 +114,104 @@ def load_runtime_config(config_path: Path, output_dir: Path) -> tuple[FusionRunt
     return runtime, adapter_cfg, raw
 
 
-def build_events(args: argparse.Namespace, adapter: FrigateAdapter, runtime_cfg: FusionRuntimeConfig) -> list[FusionEvent]:
+def build_pose_extractor_config(raw_cfg: dict[str, Any]) -> PoseExtractorConfig:
+    """Build runtime pose extraction config from optional fusion YAML settings."""
+    raw_pose_cfg = raw_cfg.get("pose_extraction", {})
+    pose_cfg = dict(raw_pose_cfg.get("extractor", raw_pose_cfg)) if isinstance(raw_pose_cfg, dict) else {}
+    for non_extractor_key in ("enabled", "output_dir", "manifest_path", "log_file", "log_level", "datasets"):
+        pose_cfg.pop(non_extractor_key, None)
+    runtime_device = raw_cfg.get("runtime", {}).get("device")
+    if runtime_device and "device" not in pose_cfg:
+        pose_cfg["device"] = runtime_device
+    return PoseExtractorConfig(**pose_cfg)
+
+
+def attach_frigate_pose(
+    event: FusionEvent,
+    adapter: FrigateAdapter,
+    output_dir: Path,
+    raw_cfg: dict[str, Any],
+    dry_run: bool,
+) -> FusionEvent:
+    """Extract or plan Trigger pose for a Frigate API event clip."""
+    if event.pose_input_path:
+        return event
+
+    pose_output_path = adapter.pose_output_path(event.event_id, output_dir)
+    pose_metadata: dict[str, Any] = {
+        "output_path": str(pose_output_path),
+        "extracted": False,
+        "dry_run": dry_run,
+    }
+
+    if dry_run:
+        event.metadata = {**event.metadata, FRIGATE_POSE_METADATA_KEY: pose_metadata}
+        LOGGER.info("Dry-run planned Frigate pose extraction: %s", pose_output_path)
+        return event
+
+    if not event.clip_path:
+        pose_metadata["error"] = "missing_clip_path"
+        event.metadata = {**event.metadata, FRIGATE_POSE_METADATA_KEY: pose_metadata}
+        return event
+
+    clip_path = Path(event.clip_path)
+    if not clip_path.is_file():
+        pose_metadata["error"] = f"clip_path_not_found:{clip_path}"
+        event.metadata = {**event.metadata, FRIGATE_POSE_METADATA_KEY: pose_metadata}
+        return event
+
+    extractor_cfg = build_pose_extractor_config(raw_cfg)
+    if pose_output_path.is_file() and not extractor_cfg.overwrite:
+        event.pose_input_path = str(pose_output_path)
+        pose_metadata.update({"extracted": True, "status": "skipped_existing", "note": "overwrite_disabled"})
+        event.metadata = {**event.metadata, FRIGATE_POSE_METADATA_KEY: pose_metadata}
+        return event
+
+    try:
+        model = load_yolo_model(extractor_cfg.model)
+        success, frame_count, detected_count, avg_people, note = extract_video_pose(
+            model=model,
+            video_path=clip_path,
+            output_path=pose_output_path,
+            config=extractor_cfg,
+        )
+    except Exception as exc:  # noqa: BLE001
+        LOGGER.exception("Pose extraction failed for Frigate event %s", event.event_id)
+        pose_metadata["error"] = str(exc)
+        event.metadata = {**event.metadata, FRIGATE_POSE_METADATA_KEY: pose_metadata}
+        return event
+
+    pose_metadata.update(
+        {
+            "status": "success" if success else "failed",
+            "frame_count": frame_count,
+            "detected_frame_count": detected_count,
+            "avg_detected_persons_per_frame": avg_people,
+            "note": note,
+        }
+    )
+    if success:
+        event.pose_input_path = str(pose_output_path)
+        pose_metadata["extracted"] = True
+    else:
+        pose_metadata["error"] = note
+
+    event.metadata = {**event.metadata, FRIGATE_POSE_METADATA_KEY: pose_metadata}
+    return event
+
+
+def build_events(
+    args: argparse.Namespace,
+    adapter: FrigateAdapter,
+    runtime_cfg: FusionRuntimeConfig,
+    raw_cfg: dict[str, Any],
+) -> list[FusionEvent]:
     """Build event list from selected input source."""
     if args.event_id:
         event = adapter.resolve_event(args.event_id)
-        return [adapter.attach_event_clip(event, runtime_cfg.extraction_output_dir, dry_run=args.dry_run)]
+        event = adapter.attach_event_clip(event, runtime_cfg.extraction_output_dir, dry_run=args.dry_run)
+        event = attach_frigate_pose(event, adapter, args.output_dir, raw_cfg, dry_run=args.dry_run)
+        return [event]
     if args.event_json:
         return [adapter.resolve_media_paths(event) for event in load_json_events(args.event_json, source="manual")]
     if args.events_dir:
@@ -197,7 +291,7 @@ def run(args: argparse.Namespace) -> int:
     setup_logging(args.output_dir, debug=args.debug)
     runtime_cfg, adapter_cfg, raw_cfg = load_runtime_config(args.config, args.output_dir)
     adapter = FrigateAdapter(adapter_cfg)
-    events = build_events(args, adapter, runtime_cfg)
+    events = build_events(args, adapter, runtime_cfg, raw_cfg)
 
     trigger, verifier = build_inferencers(raw_cfg, dry_run=args.dry_run)
     runtime = FusionRuntime(trigger_inferencer=trigger, verifier_inferencer=verifier, config=runtime_cfg)

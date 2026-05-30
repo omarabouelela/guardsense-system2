@@ -14,6 +14,7 @@ from src.trigger.infer import FrigateEvent as TriggerEvent
 
 LOGGER = logging.getLogger(__name__)
 FRIGATE_CLIP_METADATA_KEY = "frigate_clip_download"
+FRIGATE_POSE_METADATA_KEY = "frigate_pose_extraction"
 
 
 class PoseExtractionHook(Protocol):
@@ -82,6 +83,7 @@ class FusionRuntime:
         trigger_out: dict[str, Any] | None = None
         verifier_out: dict[str, Any] | None = None
         notes.extend(self._frigate_clip_notes(event))
+        notes.extend(self._frigate_pose_notes(event))
 
         if not event.pose_input_path and self.pose_extraction_hook and (event.clip_path or event.recording_path):
             extracted_pose = self.pose_extraction_hook(event)
@@ -94,7 +96,7 @@ class FusionRuntime:
             notes.append("missing pose and usable video media")
             return self._fallback_decision(event, notes, status="failed", review_needed=True)
 
-        if not event.pose_input_path:
+        if not event.pose_input_path and not self._failed_frigate_pose(event):
             notes.append("trigger skipped because pose input unavailable")
 
         if dry_run:
@@ -122,6 +124,8 @@ class FusionRuntime:
             notes.extend(self._trigger_notes(trigger_out))
 
         escalate = self._should_escalate(trigger_out)
+        if trigger_out is not None and self._downloaded_frigate_clip(event):
+            escalate = True
         if trigger_out is None:
             escalate = True
             notes.append("escalating without trigger output")
@@ -286,6 +290,7 @@ class FusionRuntime:
             clip_path=event.clip_path,
             planned_clip_url=self._planned_clip_url(event),
             planned_clip_path=self._planned_clip_path(event),
+            planned_pose_path=self._planned_pose_path(event),
             recording_path=event.recording_path,
             pose_input_path=event.pose_input_path,
             trigger_probs=(trigger_out or {}).get("class_probabilities"),
@@ -369,6 +374,33 @@ class FusionRuntime:
     @classmethod
     def _planned_clip_path(cls, event: FusionEvent) -> str | None:
         value = cls._frigate_clip_metadata(event).get("output_path")
+        return str(value) if value else None
+
+    @staticmethod
+    def _frigate_pose_metadata(event: FusionEvent) -> dict[str, Any]:
+        metadata = event.metadata.get(FRIGATE_POSE_METADATA_KEY)
+        return metadata if isinstance(metadata, dict) else {}
+
+    @classmethod
+    def _frigate_pose_notes(cls, event: FusionEvent) -> list[str]:
+        metadata = cls._frigate_pose_metadata(event)
+        if not metadata:
+            return []
+        if metadata.get("extracted"):
+            return ["pose extracted from Frigate clip"]
+        if metadata.get("dry_run"):
+            return [f"planned Frigate pose extraction: {metadata.get('output_path')}"]
+        if metadata.get("error"):
+            return ["pose extraction failed; trigger skipped"]
+        return []
+
+    @classmethod
+    def _failed_frigate_pose(cls, event: FusionEvent) -> bool:
+        return bool(cls._frigate_pose_metadata(event).get("error"))
+
+    @classmethod
+    def _planned_pose_path(cls, event: FusionEvent) -> str | None:
+        value = cls._frigate_pose_metadata(event).get("output_path")
         return str(value) if value else None
 
     @staticmethod
