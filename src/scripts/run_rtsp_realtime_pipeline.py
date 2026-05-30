@@ -40,7 +40,7 @@ class RealtimeThresholds:
 
     trigger_medium: float = 0.55
     trigger_high: float = 0.75
-    verifier_alert: float = 0.85
+    verifier_alert: float = 0.82
 
 
 @dataclass(slots=True)
@@ -94,6 +94,18 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--output-dir", type=Path, required=True, help="Output folder for JSONL, pose files, and alert clips")
     parser.add_argument("--debug", action="store_true", help="Enable DEBUG logging")
     parser.add_argument("--max-seconds", type=float, default=None, help="Optional maximum runtime for local tests")
+    parser.add_argument(
+        "--trigger-high-threshold",
+        type=float,
+        default=0.75,
+        help="Trigger class-1 probability required to save a clip and run Verifier",
+    )
+    parser.add_argument(
+        "--verifier-alert-threshold",
+        type=float,
+        default=0.82,
+        help="Verifier class-1 probability required to write an automatic alert",
+    )
     return parser
 
 
@@ -162,15 +174,19 @@ def load_yaml_config(path: Path) -> dict[str, Any]:
     return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
 
 
-def build_loop_config(raw_cfg: dict[str, Any]) -> RealtimeLoopConfig:
+def build_loop_config(
+    raw_cfg: dict[str, Any],
+    trigger_high_threshold: float = 0.75,
+    verifier_alert_threshold: float = 0.82,
+) -> RealtimeLoopConfig:
     """Build RTSP loop config from optional YAML overrides."""
     rtsp_cfg = raw_cfg.get("rtsp_realtime", {}) or {}
     threshold_cfg = rtsp_cfg.get("thresholds", {}) or {}
     vp = raw_cfg.get("video_process", {}) or {}
     thresholds = RealtimeThresholds(
         trigger_medium=float(threshold_cfg.get("trigger_medium", 0.55)),
-        trigger_high=float(threshold_cfg.get("trigger_high", 0.75)),
-        verifier_alert=float(threshold_cfg.get("verifier_alert", 0.85)),
+        trigger_high=float(trigger_high_threshold),
+        verifier_alert=float(verifier_alert_threshold),
     )
     buffer_seconds = float(rtsp_cfg.get("buffer_seconds", 5.0))
     return RealtimeLoopConfig(
@@ -459,7 +475,11 @@ def run(args: argparse.Namespace) -> int:
     """Run the prototype RTSP rolling loop."""
     setup_logging(args.output_dir, args.debug)
     raw_cfg = load_yaml_config(args.config)
-    loop_cfg = build_loop_config(raw_cfg)
+    loop_cfg = build_loop_config(
+        raw_cfg,
+        trigger_high_threshold=args.trigger_high_threshold,
+        verifier_alert_threshold=args.verifier_alert_threshold,
+    )
     models = build_runtime_models(raw_cfg)
 
     live_events_path = args.output_dir / "live_events.jsonl"
@@ -472,9 +492,11 @@ def run(args: argparse.Namespace) -> int:
     masked_url = mask_rtsp_url(args.rtsp_url)
     LOGGER.info("Starting RTSP prototype runner camera=%s stream=%s", args.camera_name, masked_url)
     LOGGER.info(
-        "Loop config buffer_seconds=%.1f analysis_interval_seconds=%.1f",
+        "Loop config buffer_seconds=%.1f analysis_interval_seconds=%.1f trigger_high=%.2f verifier_alert=%.2f",
         loop_cfg.buffer_seconds,
         loop_cfg.analysis_interval_seconds,
+        loop_cfg.thresholds.trigger_high,
+        loop_cfg.thresholds.verifier_alert,
     )
 
     capture = None
