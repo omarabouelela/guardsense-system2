@@ -4,15 +4,19 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from src.fusion.event_schema import FusionEvent
 
 LOGGER = logging.getLogger(__name__)
+FRIGATE_CLIP_METADATA_KEY = "frigate_clip_download"
+_SAFE_FILENAME_RE = re.compile(r"[^A-Za-z0-9_.-]+")
 
 
 @dataclass(slots=True)
@@ -50,6 +54,58 @@ class FrigateAdapter:
         """Resolve event by Frigate event ID via API then path heuristics."""
         payload = self.fetch_event_from_api(event_id)
         return self.from_api_event(payload)
+
+    def clip_download_url(self, event_id: str) -> str:
+        """Build the Frigate event clip API URL."""
+        if not self.config.api_base_url:
+            raise ValueError("Frigate api_base_url is required to download event clips")
+        base = self.config.api_base_url.rstrip("/")
+        return f"{base}/api/events/{quote(str(event_id), safe='')}/clip.mp4"
+
+    def clip_output_path(self, event_id: str, output_dir: Path) -> Path:
+        """Return the local runtime path for a downloaded Frigate clip."""
+        safe_event_id = _safe_filename_token(event_id)
+        return output_dir / f"frigate_{safe_event_id}_clip.mp4"
+
+    def attach_event_clip(self, event: FusionEvent, output_dir: Path, dry_run: bool = False) -> FusionEvent:
+        """Download or plan a Frigate event clip and attach it to the event."""
+        clip_url = self.clip_download_url(event.event_id)
+        output_path = self.clip_output_path(event.event_id, output_dir)
+        clip_metadata: dict[str, Any] = {
+            "clip_url": clip_url,
+            "output_path": str(output_path),
+            "downloaded": False,
+            "dry_run": dry_run,
+        }
+
+        if dry_run:
+            event.metadata = {**event.metadata, FRIGATE_CLIP_METADATA_KEY: clip_metadata}
+            LOGGER.info("Dry-run planned Frigate clip download: %s -> %s", clip_url, output_path)
+            return event
+
+        headers = {"Accept": "video/mp4"}
+        if self.config.api_key:
+            headers["Authorization"] = f"Bearer {self.config.api_key}"
+
+        try:
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            request = Request(url=clip_url, headers=headers, method="GET")
+            with urlopen(request, timeout=30) as response:
+                clip_bytes = response.read()
+            if not clip_bytes:
+                raise RuntimeError("Frigate clip response was empty")
+            output_path.write_bytes(clip_bytes)
+        except (HTTPError, URLError, TimeoutError, OSError, RuntimeError) as exc:
+            clip_metadata["error"] = str(exc)
+            event.metadata = {**event.metadata, FRIGATE_CLIP_METADATA_KEY: clip_metadata}
+            LOGGER.warning("Failed to download Frigate clip for event %s: %s", event.event_id, exc)
+            return event
+
+        event.clip_path = str(output_path)
+        clip_metadata["downloaded"] = True
+        event.metadata = {**event.metadata, FRIGATE_CLIP_METADATA_KEY: clip_metadata}
+        LOGGER.info("Downloaded Frigate clip for event %s to %s", event.event_id, output_path)
+        return event
 
     def fetch_event_from_api(self, event_id: str) -> dict[str, Any]:
         """Fetch raw Frigate event payload from API."""
@@ -124,3 +180,9 @@ def parse_mqtt_json(payload_text: str) -> FusionEvent:
     """Parse raw MQTT JSON text into FusionEvent."""
     payload = json.loads(payload_text)
     return FusionEvent.from_frigate_mqtt(payload)
+
+
+def _safe_filename_token(value: str) -> str:
+    """Convert an event id into a safe filename token."""
+    token = _SAFE_FILENAME_RE.sub("_", str(value)).strip("._-")
+    return token or "event"

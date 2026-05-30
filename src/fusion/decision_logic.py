@@ -13,6 +13,7 @@ from src.fusion.event_schema import FusionDecision, FusionEvent
 from src.trigger.infer import FrigateEvent as TriggerEvent
 
 LOGGER = logging.getLogger(__name__)
+FRIGATE_CLIP_METADATA_KEY = "frigate_clip_download"
 
 
 class PoseExtractionHook(Protocol):
@@ -80,6 +81,7 @@ class FusionRuntime:
         notes: list[str] = []
         trigger_out: dict[str, Any] | None = None
         verifier_out: dict[str, Any] | None = None
+        notes.extend(self._frigate_clip_notes(event))
 
         if not event.pose_input_path and self.pose_extraction_hook and (event.clip_path or event.recording_path):
             extracted_pose = self.pose_extraction_hook(event)
@@ -87,9 +89,13 @@ class FusionRuntime:
                 event.pose_input_path = extracted_pose
                 notes.append("pose extracted from video fallback hook")
 
-        if not event.pose_input_path and not (event.clip_path or event.recording_path):
+        has_planned_clip = dry_run and self._planned_frigate_clip(event)
+        if not event.pose_input_path and not (event.clip_path or event.recording_path or has_planned_clip):
             notes.append("missing pose and usable video media")
             return self._fallback_decision(event, notes, status="failed", review_needed=True)
+
+        if not event.pose_input_path:
+            notes.append("trigger skipped because pose input unavailable")
 
         if dry_run:
             notes.append("dry-run enabled; models not executed")
@@ -114,8 +120,6 @@ class FusionRuntime:
             )
             trigger_out = self.trigger_inferencer.infer_frigate_event(trigger_event)
             notes.extend(self._trigger_notes(trigger_out))
-        else:
-            notes.append("trigger skipped because pose input unavailable")
 
         escalate = self._should_escalate(trigger_out)
         if trigger_out is None:
@@ -180,6 +184,8 @@ class FusionRuntime:
 
         if source_type == "frigate_recording_extract":
             notes.append("clip extracted from recording for verifier")
+        elif source_type == "frigate_event_clip" and self._downloaded_frigate_clip(event):
+            notes.append("verifier ran from Frigate clip")
 
         verifier_out = self.verifier_inferencer.infer_clip(
             verifier_clip_path,
@@ -278,6 +284,8 @@ class FusionRuntime:
             tracked_label=event.tracked_label,
             snapshot_path=event.snapshot_path,
             clip_path=event.clip_path,
+            planned_clip_url=self._planned_clip_url(event),
+            planned_clip_path=self._planned_clip_path(event),
             recording_path=event.recording_path,
             pose_input_path=event.pose_input_path,
             trigger_probs=(trigger_out or {}).get("class_probabilities"),
@@ -322,6 +330,46 @@ class FusionRuntime:
         if pred == 2:
             return ["trigger flagged aggressive posture"]
         return ["trigger output collected"]
+
+    @staticmethod
+    def _frigate_clip_metadata(event: FusionEvent) -> dict[str, Any]:
+        metadata = event.metadata.get(FRIGATE_CLIP_METADATA_KEY)
+        return metadata if isinstance(metadata, dict) else {}
+
+    @classmethod
+    def _frigate_clip_notes(cls, event: FusionEvent) -> list[str]:
+        metadata = cls._frigate_clip_metadata(event)
+        if not metadata:
+            return []
+        if metadata.get("downloaded"):
+            return ["Frigate clip downloaded"]
+        if metadata.get("dry_run"):
+            return [
+                "planned Frigate clip download: "
+                f"{metadata.get('clip_url')} -> {metadata.get('output_path')}"
+            ]
+        if metadata.get("error"):
+            return [f"Frigate clip download failed: {metadata.get('error')}"]
+        return []
+
+    @classmethod
+    def _downloaded_frigate_clip(cls, event: FusionEvent) -> bool:
+        return bool(cls._frigate_clip_metadata(event).get("downloaded"))
+
+    @classmethod
+    def _planned_frigate_clip(cls, event: FusionEvent) -> bool:
+        metadata = cls._frigate_clip_metadata(event)
+        return bool(metadata.get("dry_run") and metadata.get("clip_url") and metadata.get("output_path"))
+
+    @classmethod
+    def _planned_clip_url(cls, event: FusionEvent) -> str | None:
+        value = cls._frigate_clip_metadata(event).get("clip_url")
+        return str(value) if value else None
+
+    @classmethod
+    def _planned_clip_path(cls, event: FusionEvent) -> str | None:
+        value = cls._frigate_clip_metadata(event).get("output_path")
+        return str(value) if value else None
 
     @staticmethod
     def _verifier_notes(verifier_out: dict[str, Any]) -> list[str]:

@@ -113,10 +113,11 @@ def load_runtime_config(config_path: Path, output_dir: Path) -> tuple[FusionRunt
     return runtime, adapter_cfg, raw
 
 
-def build_events(args: argparse.Namespace, adapter: FrigateAdapter) -> list[FusionEvent]:
+def build_events(args: argparse.Namespace, adapter: FrigateAdapter, runtime_cfg: FusionRuntimeConfig) -> list[FusionEvent]:
     """Build event list from selected input source."""
     if args.event_id:
-        return [adapter.resolve_event(args.event_id)]
+        event = adapter.resolve_event(args.event_id)
+        return [adapter.attach_event_clip(event, runtime_cfg.extraction_output_dir, dry_run=args.dry_run)]
     if args.event_json:
         return [adapter.resolve_media_paths(event) for event in load_json_events(args.event_json, source="manual")]
     if args.events_dir:
@@ -196,7 +197,7 @@ def run(args: argparse.Namespace) -> int:
     setup_logging(args.output_dir, debug=args.debug)
     runtime_cfg, adapter_cfg, raw_cfg = load_runtime_config(args.config, args.output_dir)
     adapter = FrigateAdapter(adapter_cfg)
-    events = build_events(args, adapter)
+    events = build_events(args, adapter, runtime_cfg)
 
     trigger, verifier = build_inferencers(raw_cfg, dry_run=args.dry_run)
     runtime = FusionRuntime(trigger_inferencer=trigger, verifier_inferencer=verifier, config=runtime_cfg)

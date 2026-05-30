@@ -104,6 +104,8 @@ class FusionDecision:
     tracked_label: str | None
     snapshot_path: str | None
     clip_path: str | None
+    planned_clip_url: str | None
+    planned_clip_path: str | None
     recording_path: str | None
     pose_input_path: str | None
     trigger_probs: dict[str, float] | None
